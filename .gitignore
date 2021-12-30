@@ -1,0 +1,8 @@
+build/**
+tests
+*/tmp/**
+vgcore.*
+.cache
+.vscode
+config.json
+*.txt
