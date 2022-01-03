@@ -1,4 +1,5 @@
 command=build/gdpm
+
 # Install packages using install command and specifying each package name or file
 ${command} install "ResolutionManagerPlugin" "godot-hmac"
 ${command} install -f packages.txt --clean --godot-version 3.4
@@ -12,10 +13,12 @@ ${command} sync
 
 # Search for packages containing "Godot" in package name
 ${command} search "Godot" --config config.json
-${command} search "Godot" --config config.json --no-sync
+${command} search "Godot" --no-sync --godot-version 3.4 --max-results 20 --sort updated
 
 # List all currently installed packages
 ${command} list
+${command} list packages
+${command} list remote-sources
 
 # Create a symlink of packages to specified path
 ${command} link "ResolutionManagerPlugin" "godot-hmac" --path tests/tests-godot-project

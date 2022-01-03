@@ -15,7 +15,7 @@ namespace gdpm::package_manager{
 	extern CURL *curl;
 	extern CURLcode res;
 	extern config::config_context config;
-	
+
 	struct package_info{
 		size_t asset_id;
 		std::string type;
@@ -34,6 +34,7 @@ namespace gdpm::package_manager{
 		std::string download_hash;
 		bool is_installed;
 		std::string install_path;
+		std::vector<package_info> dependencies;
 	};
 
 	struct cxxargs{
@@ -64,8 +65,7 @@ namespace gdpm::package_manager{
 	GDPM_DLL_EXPORT void remove_packages(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void update_packages(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void search_for_packages(const std::vector<std::string>& package_titles);
-	GDPM_DLL_EXPORT void list_installed_packages();
-	GDPM_DLL_EXPORT void read_package_contents(const std::string& package_title);
+	GDPM_DLL_EXPORT void list_information(const std::vector<std::string>& opts);
 	GDPM_DLL_EXPORT void clean_temporary(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void link_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
 	GDPM_DLL_EXPORT void clone_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
@@ -78,6 +78,8 @@ namespace gdpm::package_manager{
 	GDPM_DLL_EXPORT void run_command(command_e command, const std::vector<std::string>& package_titles, const std::vector<std::string>& opts);
 	GDPM_DLL_EXPORT void print_package_list(const rapidjson::Document& json);
 	GDPM_DLL_EXPORT void print_package_list(const std::vector<package_info>& packages);
+	GDPM_DLL_EXPORT void print_remote_sources();
 
 	GDPM_DLL_EXPORT std::vector<package_info> synchronize_database(const std::vector<std::string>& package_titles);
+	GDPM_DLL_EXPORT std::vector<std::string> resolve_dependencies(const std::vector<std::string>& package_titles);
 }

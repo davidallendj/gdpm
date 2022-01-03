@@ -21,21 +21,27 @@ find_package(fmt CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
 find_package(Poco CONFIG REQUIRED COMPONENTS Net JSON Util)
+find_package(libzip CONFIG REQUIRED)
+find_package(unofficial-sqlite3 CONFIG REQUIRED)	# ...used with vcpkg unsuccessfully...
 
 set(CMAKE_CXX_COMPILER "clang++")
+set(CMAKE_BUILD_RPATH "build/cmake")
 set(CMAKE_CXX_FLAGS 
 	"${CMAKE_CXX_FLAGS} -std=c++20 -Ofast -fPIC -fPIE -fpermissive -Wall -Wno-switch -Wno-unused-variable -Wno-sign-conversion -pedantic-errors"
 )
 set(INCLUDE_DIRS
 	"include"
 	${RAPIDJSON_INCLUDE_DIRS}
+	${SQLite3_INCLUDE_DIRS}
 )
 set(LINK_LIBS 
 	fmt::fmt 
 	Threads::Threads 
 	Catch2::Catch2 
-	cxxopts::cxxopts 
+	cxxopts::cxxopts
+	unofficial::sqlite3::sqlite3
 	-lcurlpp
+	-lzip
 )
 
 # Set library and executable targets
@@ -54,4 +60,4 @@ target_link_libraries(${PROJECT_NAME}-shared PRIVATE ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-static PRIVATE ${LINK_LIBS})
 
 # Add project unit tests
-add_custom_target("${PROJECT_NAME}-tests" SOURCE ${TESTS})
+# add_custom_target("${PROJECT_NAME}-tests" SOURCE ${TESTS})

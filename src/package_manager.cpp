@@ -34,7 +34,7 @@ namespace gdpm::package_manager{
 	CURL *curl;
 	CURLcode res;
 	config::config_context config;
-	rest_api::asset_list_context params;
+	rest_api::rest_api_context params;
 	command_e command;
 	std::vector<std::string> packages;
 	std::vector<std::string> opts;
@@ -83,7 +83,8 @@ namespace gdpm::package_manager{
 
 
 	void install_packages(const std::vector<std::string>& package_titles){
-		using namespace rapidjson; 		
+		using namespace rapidjson; 
+		params.verbose = config.verbose;
 
 		/* Check if the package data is already stored in cache. If it is, there 
 		is no need to do a lookup to synchronize the local database since we 
@@ -95,7 +96,6 @@ namespace gdpm::package_manager{
 		cache if possible. */
 		if(config.enable_sync){
 			if(p_cache.empty()){
-				log::info("Synchronizing database...");
 				p_cache = synchronize_database(package_titles);
 				p_cache = cache::get_package_info_by_title(package_titles);
 			}
@@ -135,9 +135,10 @@ namespace gdpm::package_manager{
 			/* Retrieve necessary asset data if it was found already in cache */
 			Document doc;
 			if(p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty()){
-				doc = rest_api::get_asset(url, p.asset_id, config.verbose);
+				doc = rest_api::get_asset(url, p.asset_id, params);
 				if(doc.HasParseError() || doc.IsNull()){
-					log::error("Could not get a response from server. ({})", doc.GetParseError());
+					log::println("");
+					log::error("Error parsing HTTP response. (error code: {})", doc.GetParseError());
 					return;
 				}
 				p.category			= doc["category"].GetString();
@@ -286,36 +287,50 @@ namespace gdpm::package_manager{
 		using namespace rapidjson;
 		/* If no package titles provided, update everything and then exit */
 		if(package_titles.empty()){
-
+			std::string url{constants::HostUrl};
+			url += rest_api::endpoints::GET_AssetId;
+			Document doc = rest_api::get_assets_list(url, params);
+			if(doc.IsNull()){
+				log::error("Could not get response from server. Aborting.");
+				return;
+			}
 			return;
 		}
 
 		/* Fetch remote asset data and compare to see if there are package updates */
-		std::vector<package_info> p_updates = {};
+		std::vector<std::string> p_updates = {};
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
 
-		std::string url{constants::HostUrl};
-		url += rest_api::endpoints::GET_Asset;
-		Document doc = rest_api::get_assets_list(url, params);
+		log::println("Packages to update: ");
+		for(const auto& p_title : p_updates)
+			log::print("  {}  ", p_title);
+		log::println("");
 
-		if(doc.IsNull()){
-			log::error("Could not get response from server. Aborting.");
-			return;
-		}
-
-		for(const auto& p : p_updates){
-			for(const auto& o : doc["result"].GetArray()){
-				size_t local_version = std::stoul(p.version); 
-				std::string remote_version_s = o[""].GetString();
+		/* Check version information to see if packages need updates */
+		for(const auto& p : p_cache){
+			std::string url{constants::HostUrl};
+			url += rest_api::endpoints::GET_AssetId;
+			Document doc = rest_api::get_asset(url, p.asset_id);
+			std::string remote_version = doc["version"].GetString();
+			if(p.version != remote_version){
+				p_updates.emplace_back(p.title);
 			}
 		}
+
+		if(!skip_prompt){
+			if(!utils::prompt_user_yn("Do you want to update the following packages? (y/n)"))
+				return;
+		}
+
+		remove_packages(p_updates);
+		install_packages(p_updates);
 	}
 
 
 	void search_for_packages(const std::vector<std::string> &package_titles){
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
-
-		if(!p_cache.empty()){
+		
+		if(!p_cache.empty() && !config.enable_sync){
 			print_package_list(p_cache);
 			return;
 		}
@@ -341,20 +356,25 @@ namespace gdpm::package_manager{
 	}
 
 
-	void list_installed_packages(){
+	void list_information(const std::vector<std::string>& opts){
 		using namespace rapidjson;
-		using namespace std::filesystem;		
-		const path path{config.packages_dir};
-		std::vector<package_info> p_installed = cache::get_installed_packages();
-		if(p_installed.empty())
+		using namespace std::filesystem;
+
+		if(opts.empty() || opts[0] == "packages"){
+			const path path{config.packages_dir};
+			std::vector<package_info> p_installed = cache::get_installed_packages();
+			if(p_installed.empty())
+				return;
+			log::println("Installed packages:");
+			print_package_list(p_installed);
+		}
+		else if(opts[0] == "remote-sources"){
+			print_remote_sources();
+		}
+		else{
+			log::error("Unrecognized subcommand. Use either 'packages' or 'remote-sources' instead.");
 			return;
-		log::println("Installed packages:");
-		print_package_list(p_installed);
-	}
-
-	
-	void read_package_contents(const std::string& package_title){
-
+		}
 	}
 
 
@@ -378,6 +398,11 @@ namespace gdpm::package_manager{
 	void link_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths){
 		using namespace std::filesystem;
 
+		if(paths.empty()){
+			log::error("No path set. Use '--path' option to set a path.");
+			return;
+		}
+
 		std::vector<package_info> p_found = {};
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
 		if(p_cache.empty()){
@@ -392,11 +417,16 @@ namespace gdpm::package_manager{
 			}
 		}
 
+		if(p_found.empty()){
+			log::error("No packages found to link.");
+			return;
+		}
+
 		/* Get the storage paths for all packages to create symlinks */
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
 			for(const auto& path : paths){
-				log::info("Creating symlink for \"{}\" package to {}", p.title, path + "/" + p.title);
+				log::info_n("Creating symlink for \"{}\" package to '{}'...", p.title, path + "/" + p.title);
 				// std::filesystem::path target{config.packages_dir + "/" + p.title};
 				std::filesystem::path target = {current_path().string() + "/" + config.packages_dir + "/" + p.title};
 				std::filesystem::path symlink_path{path + "/" + p.title};
@@ -407,6 +437,7 @@ namespace gdpm::package_manager{
 				if(ec){
 					log::error("Could not create symlink: {}", ec.message());
 				}
+				log::println("Done.");
 			}
 		}
 	}
@@ -414,6 +445,11 @@ namespace gdpm::package_manager{
 
 	void clone_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths){
 		using namespace std::filesystem;
+
+		if(paths.empty()){
+			log::error("No path set. Use '--path' option to set a path.");
+			return;
+		}
 
 		std::vector<package_info> p_found = {};
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
@@ -427,6 +463,11 @@ namespace gdpm::package_manager{
 			if(found != p_cache.end()){
 				p_found.emplace_back(*found);
 			}
+		}
+
+		if(p_found.empty()){
+			log::error("No packages to clone.");
+			return;
 		}
 
 		/* Get the storage paths for all packages to create clones */
@@ -463,9 +504,30 @@ namespace gdpm::package_manager{
 	}
 
 
+	/* TODO: Need to finish implementation...will do that when it's needed. */
 	void delete_remote_repository(size_t index){
 		auto& s = config.remote_sources;
 		// std::erase(s, index);
+	}
+
+
+	std::vector<std::string> resolve_dependencies(const std::vector<std::string>& package_titles){
+		std::vector<std::string> p_deps = {};
+		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
+
+		/* Build an graph of every thing to check then install in order */
+		for(const auto& p : p_cache){
+			if(p.dependencies.empty())
+				continue;
+			
+			/* Check if dependency has a dependency. If so, resolve those first. */
+			for(const auto& d : p.dependencies){
+				auto temp = resolve_dependencies({d.title});
+				utils::move_if_not(temp, p_deps, [](const std::string& p){ return true; });
+			}
+		}
+
+		return p_deps;
 	}
 
 
@@ -490,7 +552,9 @@ namespace gdpm::package_manager{
 			("sync", "Sync local database with remote server.")
 			("add-remote", "Set a source repository.", cxxopts::value<std::string>()->default_value(constants::AssetRepo), "<url>")
 			("delete-remote", "Remove a source repository from list.", cxxopts::value<std::string>(), "<url>")
+			("remote", "One time remote source use. Source is not saved and override sources used in config.", cxxopts::value<std::vector<std::string>>(), "<url>")
 			("h,help", "Print this message and exit.")
+			("version", "Show the version and exit.")
 		;
 		options.parse_positional({"input"});
 		options.add_options("Options")
@@ -517,9 +581,6 @@ namespace gdpm::package_manager{
 
 
 	void handle_arguments(const cxxargs& args){
-		auto _get_package_list = [](const cxxopts::ParseResult& result, const char *arg){
-			return result[arg].as<std::vector<std::string>>();
-		};
 		const auto& result = args.result;
 		const auto& options = args.options;
 
@@ -539,6 +600,9 @@ namespace gdpm::package_manager{
 			if(iter != config.remote_sources.end())
 				config.remote_sources.erase(iter);
 		}
+		if(result.count("remote")){
+
+		}
 		if(result.count("file")){
 			std::string path = result["file"].as<std::string>();
 			std::string contents = utils::readfile(path);
@@ -548,8 +612,8 @@ namespace gdpm::package_manager{
 			opts = result["path"].as<std::vector<std::string>>();
 		}
 		if(result.count("sort")){
-			rest_api::sort_e sort = rest_api::sort_e::none;
 			std::string r = result["sort"].as<std::string>();
+			rest_api::sort_e 		sort = rest_api::sort_e::none;
 			if(r == "none") 		sort = rest_api::sort_e::none;
 			else if(r == "rating")	sort = rest_api::sort_e::rating;
 			else if(r == "cost")	sort = rest_api::sort_e::cost;
@@ -558,16 +622,16 @@ namespace gdpm::package_manager{
 			params.sort = sort;
 		}
 		if(result.count("type")){
-			rest_api::type_e type = rest_api::type_e::any;
 			std::string r = result["type"].as<std::string>();
+			rest_api::type_e 		type = rest_api::type_e::any;
 			if(r == "any")			type = rest_api::type_e::any;
 			else if(r == "addon")	type = rest_api::type_e::addon;
 			else if(r == "project")	type = rest_api::type_e::project;
 			params.type = type;
 		}
 		if(result.count("support")){
-			rest_api::support_e support = rest_api::support_e::all;
 			std::string r = result["support"].as<std::string>();
+			rest_api::support_e 		support = rest_api::support_e::all;
 			if(r == "all")				support = rest_api::support_e::all;
 			else if(r == "official") 	support = rest_api::support_e::official;
 			else if(r == "community") 	support = rest_api::support_e::community;
@@ -633,7 +697,7 @@ namespace gdpm::package_manager{
 		else if(argv[0] == "update" || argv[0] == "--update") 	command = update;
 		else if(argv[0] == "search" || argv[0] == "--search") 	command = search;
 		else if(argv[0] == "list" || argv[0] == "-ls")			command = list;
-		else if (argv[0] == "link" || argv[0] == "--link")		command = link;
+		else if(argv[0] == "link" || argv[0] == "--link")		command = link;
 		else if(argv[0] == "clone" || argv[0] == "--clone")		command = clone;
 		else if(argv[0] == "clean" || argv[0] == "--clean")		command = clean;
 		else if(argv[0] == "sync" || argv[0] == "--sync")		command = sync;
@@ -641,6 +705,9 @@ namespace gdpm::package_manager{
 		else if(argv[0] == "delete-remote" || argv[0] == "--delete-remote") command = delete_remote;
 		else if(argv[0] == "help" || argv[0] == "-h" || argv[0] == "--help"){
 			log::println("{}", options.help());
+		}
+		else{
+			log::error("Unrecognized command. Try 'gdpm help' for more info.");
 		}
 	}
 
@@ -652,7 +719,7 @@ namespace gdpm::package_manager{
 			case remove: 	remove_packages(package_titles); 		break;
 			case update:	update_packages(package_titles); 		break;
 			case search: 	search_for_packages(package_titles); 	break;
-			case list: 		list_installed_packages(); 				break;
+			case list: 		list_information(package_titles); 		break;
 							/* ...opts are the paths here */
 			case link:		link_packages(package_titles, opts);	break;
 			case clone:		clone_packages(package_titles, opts);	break;
@@ -668,12 +735,12 @@ namespace gdpm::package_manager{
 
 	void print_package_list(const std::vector<package_info>& packages){
 		for(const auto& p : packages){
-			log::println("{}/{}  {}  id={}\n\t{}, Godot {}, {}, {}, Last Modified: {}",
+			log::println("{}/{}/{}  {}  id={}\n\tGodot {}, {}, {}, Last Modified: {}",
 				p.support_level,
+				p.author,
 				p.title,
 				p.version,
 				p.asset_id,
-				p.author,
 				p.godot_version,
 				p.cost,
 				p.category,
@@ -685,17 +752,25 @@ namespace gdpm::package_manager{
 
 	void print_package_list(const rapidjson::Document& json){
 		for(const auto& o : json["result"].GetArray()){
-			log::println("{}/{}  {}  id={}\n\t{}, Godot {}, {}, {}, Last Modified: {}",
+			log::println("{}/{}/{}  {}  id={}\n\tGodot {}, {}, {}, Last Modified: {}",
 				o["support_level"]	.GetString(), 
+				o["author"]			.GetString(),
 				o["title"]			.GetString(),
 				o["version_string"]	.GetString(), 
 				o["asset_id"]		.GetString(),
-				o["author"]			.GetString(),
 				o["godot_version"]	.GetString(),
 				o["cost"]			.GetString(),
 				o["category"]		.GetString(),
 				o["modify_date"]	.GetString()
 			);
+		}
+	}
+
+	
+	void print_remote_sources(){
+		log::println("Remote sources:");
+		for(const auto& s : config.remote_sources){
+			log::println("\t{}", s);
 		}
 	}
 
@@ -711,6 +786,7 @@ namespace gdpm::package_manager{
 		int total_items = 0;
 		int items_left = 0;
 
+		log::info_n("Sychronizing database...");
 		do{
 			/* Make the GET request to get page data and store it in the local 
 			package database. Also, check to see if we need to keep going. */
@@ -720,7 +796,7 @@ namespace gdpm::package_manager{
 			params.page += 1;
 
 			if(doc.IsNull()){
-				log::error("Could not get response from server. Aborting.");
+				log::error("\nCould not get response from server. Aborting.");
 				return {};
 			}
 
@@ -764,6 +840,8 @@ namespace gdpm::package_manager{
 
 
 		} while(items_left > 0);
+
+		log::println("Done.");
 
 		return cache::get_package_info_by_title(package_titles);
 	}

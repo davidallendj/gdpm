@@ -39,7 +39,7 @@ namespace gdpm::constants{
 #define GDPM_DEFAULT_ASSET_SUPPORT all
 #define GDPM_DEFAULT_ASSET_FILTER ""
 #define GDPM_DEFAULT_ASSET_USER ""
-#define GDPM_DEFAULT_ASSET_GODOT_VERSION ""
+#define GDPM_DEFAULT_ASSET_GODOT_VERSION "3.4"
 #define GDPM_DEFAULT_ASSET_MAX_RESULTS 500
 #define GDPM_DEFAULT_ASSET_PAGE 0
 #define GDPM_DEFAULT_ASSET_SORT none
@@ -71,4 +71,8 @@ namespace gdpm::constants{
 
 #ifndef GDPM_ENABLE_TIMESTAMPS
 #define GDPM_ENABLE_TIMESTAMPS 1
+#endif
+
+#ifndef GDPM_TIMESTAMP_FORMAT
+#define GDPM_TIMESTAMP_FORMAT ":%I:%M:%S %p; %Y-%m-%d"
 #endif

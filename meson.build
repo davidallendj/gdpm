@@ -24,14 +24,15 @@ src = [
 	'src/http.cpp',
 	'src/cache.cpp'
 ]
-# cpp = meson.get_compiler('cpp')
-# cpp.find_library()
+
 cpp_args = [
 	'-Ofast',
 	# '-fPIC',
 	# '-fPIE',
 	# '-fconcepts',
 	# '-fsanitize=address',
+	# '-lcurl',
+	# '-lzip'
 	'-fpermissive',
 	'-Wall',
 	'-Wno-switch',
@@ -39,12 +40,11 @@ cpp_args = [
 	'-Wno-sign-conversion',
 	'-Wno-unused-function',
 	'-pedantic-errors',
-	# '-lcurl',
-	# '-lzip'
 	'-DGDPM_LOG_LEVEL=2',
 	'-DGDPM_REQUEST_DELAY=200ms',
 	'-DGDPM_ENABLE_COLORS=1',
 	'-DGDPM_ENABLE_TIMESTAMPS=1',
+	'-DGDPM_TIMESTAMP_FORMAT=":%I:%M:%S %p; %Y-%m-%d"'
 ]
 lib = shared_library(
 	meson.project_name(), 

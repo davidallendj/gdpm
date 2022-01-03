@@ -287,6 +287,7 @@ namespace gdpm::cache{
 			" download_hash='" + p.download_hash + "', " +
 			" is_installed=" + fmt::to_string(p.is_installed) + ", " 
 			" install_path='" + p.install_path + "'"
+			// " dependencies='" + p.dependencies + "'"
 			" WHERE title='" + p.title + "' AND asset_id=" + fmt::to_string(p.asset_id)
 			+ ";\n";
 		}
@@ -387,6 +388,7 @@ namespace gdpm::cache{
 	std::string to_values(const package_info& p){
 		std::string p_values{};
 		std::string p_title = p.title; /* need copy for utils::replace_all() */
+
 		p_values += fmt::to_string(p.asset_id) + ", ";
 		p_values += "'" + p.type + "', ";
 		p_values += "'" + utils::replace_all(p_title, "'", "''") + "', ";
@@ -413,4 +415,5 @@ namespace gdpm::cache{
 			o += to_values(p);
 		return o;
 	}
+
 }

@@ -1,6 +1,6 @@
 # Godot Package Manager (GDPM)
 
-A front-end, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the AssetLib with the ability to automate builds on different systems. So far, the package manager is capable of searching, downloading, installing and removing packages and makes managing Godot assets across multiple projects much easier. GDPM has not been tested on Windows yet and there are no currently plans to support macOS.
+GDPM is an attempt to make a front-end, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the AssetLib with the ability to automate builds on different systems. So far, the package manager is capable of searching, downloading, installing and removing packages and makes managing Godot assets across multiple projects much easier. GDPM has not been tested on Windows yet and there are no currently plans to support macOS.
 
 ## Why not just use the Asset Library?
 
@@ -8,7 +8,15 @@ The AssetLib is a bit limited for my use case. Personally, I wanted a way to qui
 
 Some assets are more common such as the "First Person Controller" are likely to be reused with little to no modification. Therefore, it made sense to provide some method to download and install the assets once and then provide a symbolic link back to the stored packages. GDPM attempts to fix this by storing the assets in a single location and creating symlinks/shortcuts to each project. By have a separate, simple binary executable, the package manager can be used in shell scripts to automate tasks and download assets quickly.
 
-Currently, there is no dependency management as it is not needed. There are future plans to implement a system to handle dependencies, but it is not a priority.
+Currently, there is no dependency management as it is not needed. There are future plans to implement a system to handle dependencies, but the implementation is still being fleshed out.
+
+## How It Works
+
+GDPM is built to work with an instance of [Godot's Asset API](https://github.com/godotengine/godot-asset-library). When installing packages, GDPM will first make HTTP requests to retrieve required asset data to download the asset and sync it in with a local database. Then, it will make another API request to retrieve the rest of an asset's data, update it in the database, then download it from the remote repository. Unfortunately, the package manager requires at least 2 request for a single asset. Therefore, there's an intentional 200 ms delay by default between each request to not bombard the API server, but is configurable at compile time (see "Building from source" section below).
+
+When removing a package, the unzip files are remove but the temporary files are keep in the .tmp directory unless using the '--clean' option. This allows the user to remove the uncompressed files, but easily reinstall the package without having to download it remotely again.
+
+The local database stores all the information sent by the Asset API with additional information like "install_path" and "remote_source" for the API used to gather information. 
 
 ## Features
 
@@ -20,15 +28,11 @@ Currently, there is no dependency management as it is not needed. There are futu
 
 - Create package groups to copy a set of packages into a Godot project.
 
-- Login and register for access to repositories. (Note: Planned. This feature is not officially supported by Godot's official AssetLib.)
+- 
 
-- Handle dependencies between multiple assets. (Note: Planned. This feature is not supported by Godot's official AssetLib.)
+## Building from Source
 
-- Support for paid assets. (Note: Planned. This feature is not supported by Godot's official AssetLib repository.)
-
-## Building from source
-
-The project uses the CMake or Meson build system and has been tested with GCC and Clang on Arch/Manjaro Linux. Meson is preferred, but a CMakeLists.txt is provided as well. Building on Windows has not been tested yet so it's not guaranteed to work. Compiling with CMake will build an executable, shared, and archive library. Compiling with Meson only builds an executable and shared library.
+The project uses the CMake or Meson build system and has been tested with GCC and Clang on Arch/Manjaro Linux. Meson is preferred, but a CMakeLists.txt is provided due to CMake's popularity and should work with some tweaking. Building on Windows has not been tested yet so it's not guaranteed to work. Compiling with CMake will build an executable, shared, and archive library, while compiling with Meson only builds an executable that links with a shared library.
 
 ### Prerequisites
 
@@ -42,38 +46,73 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 - RapidJson
 
-- fmt (may be remove later in favor of C++20 std::format)
-
-- Git (optional for cloning repository)
+- fmt (may be removed later in favor of C++20 std::format)
 
 - Catch2 (optional for tests, but still WIP)
 
-- cxxopts
+- cxxopts (header only)
 
 - SQLite 3
 
-After installing all necessary dependencies, open a terminal and paste the following commands.
+After installing all necessary dependencies, run the following commands:
 
 ```bash
+# Start by cloning the repo, then...
 git clone $(repo_name)
 cd $(repo_name)
 
-# ...if using Meson on Linux
+# ...if using Meson with Clang on Linux...
 meson build
-meson configure build
+meson configure build # only needed if reconfiguring build
 meson compile -C build -j$(nproc)
-
-# ... build using Clang++
 CXX=clang++ meson compile -C build -j$(npoc)
 
-# ... if using CMake on Linux
+# ...if using CMake on Linux (needs work!)...
 cd build
 cmake .. 
 make -j$(nproc)
 
-# ... build using MinGW on Windows ???
-# ... build using MSVC on Windows ??? 
+# ...build using MinGW on Windows ???
+# ...build using MSVC on Windows ??? 
+# ...build using Clang on MacOS ???
 ```
+
+Some macros can be set to enable/disable features or configure defaults by setting the C++ arguments in Meson. These values are used at compile time and a description of each value is provided below.
+
+```bash
+cpp_args = [
+    ...
+    '-DGDPM_LOG_LEVEL=2',
+    '-DGDPM_REQUEST_DELAY=200ms',
+    '-DGDPM_ENABLE_COLORS=1',
+    '-DGDPM_ENABLE_TIMESTAMPS=1'
+    ...
+]
+
+This can be done in CMake in a similar fashion:
+
+```cmake
+if(MSVC)
+    add_compile_defintions(
+        # Add flags specific to MSVC here...
+    )
+else()
+    add_compile_definitions(
+        -DGDPM_LOG_LEVEL=2
+        -DGDPM_REQUEST_DELAY=200ms
+        -DGDPM_ENABLE_COLOR=1
+        -DGDPM_ENABLE_TIMESTAMP=1
+    )
+endif()
+```
+
+| Macro                 | Values                                                       | Description                                                                                                                                     |
+| --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| GDPM_LOG_LEVEL        | 0-5                                                          | Sets the logging level to show when the program runs. Setting GDPM_LOG_LEVEL=0 will completely disable logging information being displayed.     |
+| GDPM_REQUEST_DELAY    | 200 ms                                                       | Sets the delay time (in ms) between each API request. The delay is meant to reduce the load on the API.                                         |
+| GDPM_ENABLE_COLOR     | 0 or 1 (true/false)                                          | Enable/disable color output to stdout for errors and debugging. Disable if your system or console does not support ANSI colors. (default: true) |
+| GDPM_ENABLE_TIMESTAMP | 0 or 1 (true/false)                                          | Enable/disable timestamp output to stdout. (default: true)                                                                                      |
+| GDPM_TIMESTAMP_FORMAT | strftime formated string (default: ":%I:%M:%S %p; %Y-%m-%d") | Set the time format to use in logging via strftime(). Uses ISO 8601 date and time standard as default.                                          |
 
 ## Usage Examples
 
@@ -138,6 +177,7 @@ Planned: Add a custom remote AssetLib repository using [this](https://github.com
 
 ```bash
 gdpm add-remote https://custom-assetlib/asset-library/api --set-priority 0
+gdpm delete-remote https://custom-assetlib/asset-library/api
 ```
 
 Search for available packages from all added repositories. The results can be tweaked using a variety of options like '--sort' or '--support'. See the '--help' command for more details.
@@ -146,7 +186,7 @@ Search for available packages from all added repositories. The results can be tw
 gdpm search "GodotNetworking" \ 
     --sort updated \
     --type project \
-    --max-results 100 \
+    --max-results 50 \
     --godot-version 3.4 \
     --verbose \
     --user towk \
@@ -156,8 +196,25 @@ gdpm search "GodotNetworking" \
 To see more logging information, set the '--verbose' flag using an integer value between 0-5.
 
 ```bash
-gdpm list --verbose
+gdpm list packages --verbose
+gdpm list remote-sources
 ```
+
+## Planned Features
+
+- [ ] Dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
+
+- [ ] Proper updating mechanism. 
+
+- [ ] Plugin integration into the editor.
+
+- [ ] Complete integration with the Asset API including moderation tools.
+
+- [ ] Login and register for access to repositories.
+
+- [ ] Handle dependencies between multiple assets. 
+
+- [ ] Support for paid assets. 
 
 ## License
 

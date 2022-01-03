@@ -60,7 +60,7 @@ namespace gdpm::utils{
 		return fwrite(ptr, size, nmemb, (FILE*)userdata);
 	}
 
-	static inline auto timestamp(const std::string& format = ":%I:%M:%S %p; %Y-%m-%d"){
+	static inline auto timestamp(const std::string& format = GDPM_TIMESTAMP_FORMAT){
 		time_t t = std::time(nullptr);
 #if GDPM_ENABLE_TIMESTAMPS == 1
 		return fmt::format(fmt::runtime("{"+format+"}"), fmt::localtime(t));
