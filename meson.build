@@ -44,7 +44,8 @@ cpp_args = [
 	'-DGDPM_REQUEST_DELAY=200ms',
 	'-DGDPM_ENABLE_COLORS=1',
 	'-DGDPM_ENABLE_TIMESTAMPS=1',
-	'-DGDPM_TIMESTAMP_FORMAT=":%I:%M:%S %p; %Y-%m-%d"'
+	'-DGDPM_TIMESTAMP_FORMAT=":%I:%M:%S %p; %Y-%m-%d"',
+	'-DRAPIDJSON_HAS_STDSTRING=1'
 ]
 lib = shared_library(
 	meson.project_name(), 

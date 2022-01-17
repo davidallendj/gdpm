@@ -60,6 +60,7 @@ namespace gdpm::utils{
 		return fwrite(ptr, size, nmemb, (FILE*)userdata);
 	}
 
+	/* Use ISO 8601 for default timestamp format. */
 	static inline auto timestamp(const std::string& format = GDPM_TIMESTAMP_FORMAT){
 		time_t t = std::time(nullptr);
 #if GDPM_ENABLE_TIMESTAMPS == 1
@@ -78,7 +79,7 @@ namespace gdpm::utils{
 	}
 
 	// A make_tuple wrapper for enforcing certain requirements
-	template <typename... Args>
+	template <typename...Args>
 	auto range(Args...args)
 	{
 		// Limit number of args to only 2
@@ -101,4 +102,5 @@ namespace gdpm::utils{
 	std::string prompt_user(const char *message);
 	bool prompt_user_yn(const char *message);
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
+	// TODO: Add function to get size of decompressed zip
 }

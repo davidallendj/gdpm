@@ -2,14 +2,13 @@
 #include "http.hpp"
 #include "utils.hpp"
 #include "log.hpp"
-
 #include <curl/curl.h>
 #include <stdio.h>
 #include <chrono>
 
 
 namespace gdpm::http{
-	response request_get(const std::string& url, size_t timeout){
+	response request_get(const std::string& url, size_t timeout, int verbose){
 		CURL *curl = nullptr;
 		CURLcode res;
 		utils::memory_buffer buf = utils::make_buffer();
@@ -32,7 +31,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK)
+			if(res != CURLE_OK && verbose > 0)
 				log::error("_make_request.curl_easy_perform(): {}", curl_easy_strerror(res));
 			curl_easy_cleanup(curl);
 		}
@@ -43,7 +42,7 @@ namespace gdpm::http{
 		return r;
 	}
 
-	response request_post(const std::string& url, const char *post_fields, size_t timeout){
+	response request_post(const std::string& url, const char *post_fields, size_t timeout, int verbose){
 		CURL *curl = nullptr;
 		CURLcode res;
 		utils::memory_buffer buf = utils::make_buffer();
@@ -66,7 +65,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK)
+			if(res != CURLE_OK && verbose > 0)
 				log::error("_make_request.curl_easy_perform(): {}", curl_easy_strerror(res));
 			curl_easy_cleanup(curl);
 		}
@@ -77,7 +76,7 @@ namespace gdpm::http{
 		return r;
 	}
 
-	response download_file(const std::string& url, const std::string& storage_path, size_t timeout){
+	response download_file(const std::string& url, const std::string& storage_path, size_t timeout, int verbose){
 		CURL *curl = nullptr;
 		CURLcode res;
 		response r;
@@ -114,7 +113,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK){
+			if(res != CURLE_OK && verbose > 0){
 				log::error("download_file.curl_easy_perform() failed: {}", curl_easy_strerror(res));
 			}
 			fclose(fp);

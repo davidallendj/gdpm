@@ -1,5 +1,6 @@
 #pragma once
 
+#include <rapidjson/rapidjson.h>
 #include <string>
 
 namespace gdpm::constants{

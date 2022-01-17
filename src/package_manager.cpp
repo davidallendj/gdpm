@@ -134,7 +134,9 @@ namespace gdpm::package_manager{
 			
 			/* Retrieve necessary asset data if it was found already in cache */
 			Document doc;
+			// log::debug("download_url: {}\ncategory: {}\ndescription: {}\nsupport_level: {}", p.download_url, p.category, p.description, p.support_level);
 			if(p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty()){
+				params.verbose = config.verbose;
 				doc = rest_api::get_asset(url, p.asset_id, params);
 				if(doc.HasParseError() || doc.IsNull()){
 					log::println("");
@@ -147,7 +149,23 @@ namespace gdpm::package_manager{
 				p.download_url 		= doc["download_url"].GetString();
 				p.download_hash 	= doc["download_hash"].GetString();
 			}
-			else{
+			else{ 
+				/* Package for in cache so no remote request. Still need to populate RapidJson::Document to write to package.json.
+				NOTE: This may not be necessary at all! 
+				*/
+				// doc["asset_id"].SetUint64(p.asset_id
+				// doc["type"].SetString(p.type, doc.GetAllocator());
+				// doc["title"].SetString(p.title, doc.GetAllocator());
+				// doc["author"].SetString(p.author, doc.GetAllocator());
+				// doc["author_id"].SetUint64(p.author_id);
+				// doc["version"].SetString(p.version, doc.GetAllocator());
+				// doc["category"].SetString(p.category, doc.GetAllocator());
+				// doc["godot_version"].SetString(p.godot_version, doc.GetAllocator());
+				// doc["cost"].SetString(p.cost, doc.GetAllocator());
+				// doc["description"].SetString(p.description, doc.GetAllocator());
+				// doc["support_level"].SetString(p.support_level, doc.GetAllocator());
+				// doc["download_url"].SetString(p.download_url, doc.GetAllocator());
+				// doc["download_hash"].SetString(p.download_hash, doc.GetAllocator;
 			}
 
 			/* Set directory and temp paths for storage */
@@ -164,6 +182,7 @@ namespace gdpm::package_manager{
 			/* Dump asset information for lookup into JSON in package directory */
 			if(!std::filesystem::exists(package_dir))
 				std::filesystem::create_directory(package_dir);
+			
 			std::ofstream ofs(package_dir + "/package.json");
 			OStreamWrapper osw(ofs);
 			PrettyWriter<OStreamWrapper> writer(osw);
@@ -176,8 +195,8 @@ namespace gdpm::package_manager{
 			else{
 				/* Download all the package files and place them in tmp directory. */
 				log::print("Downloading \"{}\"...", p.title);
-				std::string download_url = doc["download_url"].GetString();
-				std::string title = doc["title"].GetString();
+				std::string download_url = p.download_url;// doc["download_url"].GetString();
+				std::string title = p.title;// doc["title"].GetString();
 				http::response response = http::download_file(download_url, tmp_zip);
 				if(response.code == 200){
 					log::println("Done.");
@@ -209,6 +228,7 @@ namespace gdpm::package_manager{
 		using namespace std::filesystem;
 
 		if(package_titles.empty()){
+			log::println("");
 			log::error("No packages to remove.");
 			return;
 		}
@@ -216,6 +236,7 @@ namespace gdpm::package_manager{
 		/* Find the packages to remove if they're is_installed and show them to the user */
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
 		if(p_cache.empty()){
+			log::println("");
 			log::error("Could not find any packages to remove.");
 			return;
 		}
@@ -227,6 +248,7 @@ namespace gdpm::package_manager{
 		});
 
 		if(p_count == 0){
+			log::println("");
 			log::error("No packages to remove.");
 			return;
 		}
@@ -251,29 +273,30 @@ namespace gdpm::package_manager{
 			}
 
 			/* Traverse the package directory */
-			for(const auto& entry : recursive_directory_iterator(path)){
-				if(entry.is_directory()){
-				}
-				else if(entry.is_regular_file()){
-					std::string filename = entry.path().filename().string();
-					std::string pkg_path = entry.path().lexically_normal().string();
+			// for(const auto& entry : recursive_directory_iterator(path)){
+			// 	if(entry.is_directory()){
+			// 	}
+			// 	else if(entry.is_regular_file()){
+			// 		std::string filename = entry.path().filename().string();
+			// 		std::string pkg_path = entry.path().lexically_normal().string();
 
-					// pkg_path = utils::replace_all(pkg_path, " ", "\\ ");
-					if(filename == "package.json"){
-						std::string contents = utils::readfile(pkg_path);
-						Document doc;
-						if(config.verbose > 0){
-							log::debug("package path: {}", pkg_path);
-							log::debug("contents: \n{}", contents);
-						}
-						doc.Parse(contents.c_str());
-						if(doc.IsNull()){
-							log::error("Could not remove packages. Parsing 'package.json' returned NULL.");
-							return;
-						}
-					}
-				}
-			}
+			// 		// pkg_path = utils::replace_all(pkg_path, " ", "\\ ");
+			// 		if(filename == "package.json"){
+			// 			std::string contents = utils::readfile(pkg_path);
+			// 			Document doc;
+			// 			if(config.verbose > 0){
+			// 				log::debug("package path: {}", pkg_path);
+			// 				log::debug("contents: \n{}", contents);
+			// 			}
+			// 			doc.Parse(contents.c_str());
+			// 			if(doc.IsNull()){
+			// 				log::println("");
+			// 				log::error("Could not remove packages. Parsing 'package.json' returned NULL.");
+			// 				return;
+			// 			}
+			// 		}
+			// 	}
+			// }
 			p.is_installed = false;
 		}
 		log::println("Done.");
