@@ -88,6 +88,7 @@ cpp_args = [
     '-DGDPM_ENABLE_TIMESTAMPS=1'
     ...
 ]
+```
 
 This can be done in CMake in a similar fashion:
 
@@ -105,6 +106,8 @@ else()
     )
 endif()
 ```
+
+### Macro Definitions
 
 | Macro                 | Values                                                       | Description                                                                                                                                     |
 | --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -132,7 +135,7 @@ Packages can be installed using the "install" command and providing a list of co
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
-gdpm install -f packages.txt --config config.json --no-sync -y
+gdpm install -f packages.txt --config config.json --no-sync --no-prompt
 ```
 
 Packages can be removed similiarly to installing.
