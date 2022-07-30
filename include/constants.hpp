@@ -13,7 +13,7 @@ namespace gdpm::constants{
 	constexpr const char *TmpPath = "$HOME/.config/gdpm/tmp";
 }
 
-/* Defines to set when building with -DGPM_* */
+/* Define default macros to set when building with -DGPM_* */
 #define GDPM_CONFIG_USERNAME ""
 #define GDPM_CONFIG_PASSWORD ""
 #define GDPM_CONFIG_PATH "config.json"
@@ -28,13 +28,13 @@ namespace gdpm::constants{
 #define GDPM_CONFIG_ENABLE_FILE_LOGGING 0
 #define GDPM_CONFIG_VERBOSE 0
 
-/* Defines package cache for local storage */
+/* Defines the default package cache for local storage */
 #define GDPM_PACKAGE_CACHE_ENABLE 1
 #define GDPM_PACKAGE_CACHE_PATH "tests/gdpm/packages.db"
 #define GDPM_PACKAGE_CACHE_TABLENAME "cache"
 #define GDPM_PACKAGE_CACHE_COLNAMES "asset_id, type, title, author, author_id, version, godot_version, cost, description, modify_date, support_level, category, remote_source, download_url, download_hash, is_installed, install_path"
 
-/* Defines to set default assets API params */
+/* Define macros to set default assets API params */
 #define GDPM_DEFAULT_ASSET_TYPE any
 #define GDPM_DEFAULT_ASSET_CATEGORY 0
 #define GDPM_DEFAULT_ASSET_SUPPORT all

@@ -20,6 +20,9 @@ ${command} list
 ${command} list packages
 ${command} list remote-sources
 
+${command} add-remote https://godotengine.org/asset-library/api
+${command} delete-remote https://godotengine.org/asset-library/api
+
 # Create a symlink of packages to specified path
 ${command} link "ResolutionManagerPlugin" "godot-hmac" --path tests/tests-godot-project
 ${command} link -f packages.txt --path tests/test-godot-project

@@ -28,7 +28,7 @@
 namespace gdpm::config{
 	config_context config;
 	std::string to_json(const config_context& params){
-		auto _build_json_array = [](std::vector<std::string> a){
+		auto _build_json_array = [](std::set<std::string> a){
 			std::string o{"["};
 			for(const std::string& src : a)
 				o += "\"" + src + "\",";
@@ -104,7 +104,8 @@ namespace gdpm::config{
 				if(doc["remote_sources"].IsArray()){
 					const Value& srcs = doc["remote_sources"];
 					for(auto& src : srcs.GetArray()){
-						config.remote_sources.emplace_back(src.GetString());
+						// config.remote_sources.push_back(src.GetString());
+						config.remote_sources.insert(src.GetString());
 					}
 				} else{
 					log::error("Malformed sources found.");
@@ -157,7 +158,7 @@ namespace gdpm::config{
 		return 0;
 	}
 
-	config_context make_config(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::vector<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
+	config_context make_config(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::set<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
 		config_context config {
 			.username = username,
 			.password = password,

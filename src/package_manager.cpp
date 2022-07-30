@@ -85,6 +85,9 @@ namespace gdpm::package_manager{
 	void install_packages(const std::vector<std::string>& package_titles){
 		using namespace rapidjson; 
 		params.verbose = config.verbose;
+		
+
+		/* TODO: Need a way to use remote sources from config until no left */
 
 		/* Check if the package data is already stored in cache. If it is, there 
 		is no need to do a lookup to synchronize the local database since we 
@@ -101,7 +104,6 @@ namespace gdpm::package_manager{
 			}
 		}
 
-		// FIXME: This does not return the package to be is_installed correctly
 		for(const auto& p_title : package_titles){
 			auto found = std::find_if(p_cache.begin(), p_cache.end(), [&p_title](const package_info& p){ return p.title == p_title; });
 			if(found != p_cache.end()){
@@ -129,87 +131,92 @@ namespace gdpm::package_manager{
 		std::vector<ss_pair> dir_pairs;
 		for(auto& p : p_found){
 			log::info_n("Fetching asset data for \"{}\"...", p.title);
-			std::string url{constants::HostUrl}, package_dir, tmp_dir, tmp_zip;
-			url += rest_api::endpoints::GET_AssetId;
+
+			/* TODO: Try fetching the data with all available remote sources until retrieved */
+			for(const auto& remote_url : config.remote_sources){
+				std::string url{remote_url}, package_dir, tmp_dir, tmp_zip;
+
+				url += rest_api::endpoints::GET_AssetId;
 			
-			/* Retrieve necessary asset data if it was found already in cache */
-			Document doc;
-			// log::debug("download_url: {}\ncategory: {}\ndescription: {}\nsupport_level: {}", p.download_url, p.category, p.description, p.support_level);
-			if(p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty()){
-				params.verbose = config.verbose;
-				doc = rest_api::get_asset(url, p.asset_id, params);
-				if(doc.HasParseError() || doc.IsNull()){
-					log::println("");
-					log::error("Error parsing HTTP response. (error code: {})", doc.GetParseError());
-					return;
+				/* Retrieve necessary asset data if it was found already in cache */
+				Document doc;
+				// log::debug("download_url: {}\ncategory: {}\ndescription: {}\nsupport_level: {}", p.download_url, p.category, p.description, p.support_level);
+				if(p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty()){
+					params.verbose = config.verbose;
+					doc = rest_api::get_asset(url, p.asset_id, params);
+					if(doc.HasParseError() || doc.IsNull()){
+						log::println("");
+						log::error("Error parsing HTTP response. (error code: {})", doc.GetParseError());
+						return;
+					}
+					p.category			= doc["category"].GetString();
+					p.description 		= doc["description"].GetString();
+					p.support_level 	= doc["support_level"].GetString();
+					p.download_url 		= doc["download_url"].GetString();
+					p.download_hash 	= doc["download_hash"].GetString();
 				}
-				p.category			= doc["category"].GetString();
-				p.description 		= doc["description"].GetString();
-				p.support_level 	= doc["support_level"].GetString();
-				p.download_url 		= doc["download_url"].GetString();
-				p.download_hash 	= doc["download_hash"].GetString();
-			}
-			else{ 
-				/* Package for in cache so no remote request. Still need to populate RapidJson::Document to write to package.json.
-				NOTE: This may not be necessary at all! 
-				*/
-				// doc["asset_id"].SetUint64(p.asset_id
-				// doc["type"].SetString(p.type, doc.GetAllocator());
-				// doc["title"].SetString(p.title, doc.GetAllocator());
-				// doc["author"].SetString(p.author, doc.GetAllocator());
-				// doc["author_id"].SetUint64(p.author_id);
-				// doc["version"].SetString(p.version, doc.GetAllocator());
-				// doc["category"].SetString(p.category, doc.GetAllocator());
-				// doc["godot_version"].SetString(p.godot_version, doc.GetAllocator());
-				// doc["cost"].SetString(p.cost, doc.GetAllocator());
-				// doc["description"].SetString(p.description, doc.GetAllocator());
-				// doc["support_level"].SetString(p.support_level, doc.GetAllocator());
-				// doc["download_url"].SetString(p.download_url, doc.GetAllocator());
-				// doc["download_hash"].SetString(p.download_hash, doc.GetAllocator;
-			}
-
-			/* Set directory and temp paths for storage */
-			package_dir = config.packages_dir + "/" + p.title;
-			tmp_dir = config.tmp_dir + "/" + p.title;
-			tmp_zip = tmp_dir + ".zip";
-
-			/* Make directories for packages if they don't exist to keep everything organized */
-			if(!std::filesystem::exists(config.tmp_dir))
-				std::filesystem::create_directories(config.tmp_dir);
-			if(!std::filesystem::exists(config.packages_dir))
-				std::filesystem::create_directories(config.packages_dir);
-			
-			/* Dump asset information for lookup into JSON in package directory */
-			if(!std::filesystem::exists(package_dir))
-				std::filesystem::create_directory(package_dir);
-			
-			std::ofstream ofs(package_dir + "/package.json");
-			OStreamWrapper osw(ofs);
-			PrettyWriter<OStreamWrapper> writer(osw);
-			doc.Accept(writer);
-
-			/* Check if we already have a stored temporary file before attempting to download */
-			if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
-				log::println("Found cached package. Skipping download.", p.title);
-			}
-			else{
-				/* Download all the package files and place them in tmp directory. */
-				log::print("Downloading \"{}\"...", p.title);
-				std::string download_url = p.download_url;// doc["download_url"].GetString();
-				std::string title = p.title;// doc["title"].GetString();
-				http::response response = http::download_file(download_url, tmp_zip);
-				if(response.code == 200){
-					log::println("Done.");
-				}else{
-					log::error("Something went wrong...(code {})", response.code);
-					return;
+				else{ 
+					/* Package for in cache so no remote request. Still need to populate RapidJson::Document to write to package.json.
+					NOTE: This may not be necessary at all! 
+					*/
+					// doc["asset_id"].SetUint64(p.asset_id
+					// doc["type"].SetString(p.type, doc.GetAllocator());
+					// doc["title"].SetString(p.title, doc.GetAllocator());
+					// doc["author"].SetString(p.author, doc.GetAllocator());
+					// doc["author_id"].SetUint64(p.author_id);
+					// doc["version"].SetString(p.version, doc.GetAllocator());
+					// doc["category"].SetString(p.category, doc.GetAllocator());
+					// doc["godot_version"].SetString(p.godot_version, doc.GetAllocator());
+					// doc["cost"].SetString(p.cost, doc.GetAllocator());
+					// doc["description"].SetString(p.description, doc.GetAllocator());
+					// doc["support_level"].SetString(p.support_level, doc.GetAllocator());
+					// doc["download_url"].SetString(p.download_url, doc.GetAllocator());
+					// doc["download_hash"].SetString(p.download_hash, doc.GetAllocator;
 				}
+
+				/* Set directory and temp paths for storage */
+				package_dir = config.packages_dir + "/" + p.title;
+				tmp_dir = config.tmp_dir + "/" + p.title;
+				tmp_zip = tmp_dir + ".zip";
+
+				/* Make directories for packages if they don't exist to keep everything organized */
+				if(!std::filesystem::exists(config.tmp_dir))
+					std::filesystem::create_directories(config.tmp_dir);
+				if(!std::filesystem::exists(config.packages_dir))
+					std::filesystem::create_directories(config.packages_dir);
+				
+				/* Dump asset information for lookup into JSON in package directory */
+				if(!std::filesystem::exists(package_dir))
+					std::filesystem::create_directory(package_dir);
+				
+				std::ofstream ofs(package_dir + "/package.json");
+				OStreamWrapper osw(ofs);
+				PrettyWriter<OStreamWrapper> writer(osw);
+				doc.Accept(writer);
+
+				/* Check if we already have a stored temporary file before attempting to download */
+				if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
+					log::println("Found cached package. Skipping download.", p.title);
+				}
+				else{
+					/* Download all the package files and place them in tmp directory. */
+					log::print("Downloading \"{}\"...", p.title);
+					std::string download_url = p.download_url;// doc["download_url"].GetString();
+					std::string title = p.title;// doc["title"].GetString();
+					http::response response = http::download_file(download_url, tmp_zip);
+					if(response.code == 200){
+						log::println("Done.");
+					}else{
+						log::error("Something went wrong...(code {})", response.code);
+						return;
+					}
+				}
+
+				dir_pairs.emplace_back(ss_pair(tmp_zip, package_dir + "/"));
+
+				p.is_installed = true;
+				p.install_path = package_dir;
 			}
-
-			dir_pairs.emplace_back(ss_pair(tmp_zip, package_dir + "/"));
-
-			p.is_installed = true;
-			p.install_path = package_dir;
 		}
 
 		/* Extract all the downloaded packages to their appropriate directory location. */
@@ -512,18 +519,19 @@ namespace gdpm::package_manager{
 
 	void add_remote_repository(const std::string& repository, ssize_t offset){
 		auto& s = config.remote_sources;
-		auto iter = (offset > 0) ? s.begin() + offset : s.end() - offset;
-		config.remote_sources.insert(iter, repository);
+		// auto iter = (offset > 0) ? s.begin() + offset : s.end() - offset;
+		// config.remote_sources.insert(iter, repository);
+		config.remote_sources.insert(repository);
 	}
 
 
 	void delete_remote_repository(const std::string& repository){
 		auto& s = config.remote_sources;
-
-		std::erase(s, repository);
-		(void)std::remove_if(s.begin(), s.end(), [&repository](const std::string& rs){
-			return repository == rs;
-		});
+		s.erase(repository);
+		// std::erase(s, repository);
+		// (void)std::remove_if(s.begin(), s.end(), [&repository](const std::string& rs){
+		// 	return repository == rs;
+		// });
 	}
 
 
@@ -594,7 +602,7 @@ namespace gdpm::package_manager{
 			("set-temporary-directory", "Set the local temporary storage location.", cxxopts::value<std::string>())
 			("timeout", "Set the amount of time to wait for a response.", cxxopts::value<size_t>())
 			("no-sync", "Disable synchronizing with remote.", cxxopts::value<bool>()->implicit_value("true")->default_value("false"))
-			("y,yes", "Bypass yes/no prompt for installing or removing packages.")
+			("y,no-prompt", "Bypass yes/no prompt for installing or removing packages.")
 			("v,verbose", "Show verbose output.", cxxopts::value<int>()->implicit_value("1")->default_value("0"), "0-5")
 		;
 
@@ -615,7 +623,8 @@ namespace gdpm::package_manager{
 		}
 		if(result.count("add-remote")){
 			std::string repo = result["remote-add"].as<std::string>();
-			config.remote_sources.emplace_back(repo);
+			// config.remote_sources.emplace_back(repo);
+			config.remote_sources.insert(repo);
 		}
 		if(result.count("delete-remote")){
 			std::string repo = result["remote-add"].as<std::string>();

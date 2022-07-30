@@ -150,10 +150,12 @@ gdpm update -f packages.txt
 gdpm update    # Updates all packages
 ```
 
-To list installed packages, use the '--list' option. This also provides some other extra information like the Godot version and license.
+To list installed packages, use the 'list' command. This also provides some other extra information like the Godot version and license. You can also list the remote sources using the 'remote-sources' option.
 
 ```bash
 gdpm list
+gdpm list packages
+gdpm list remote-sources
 ```
 
 Packages can be linked or copied into a project using the 'link' and 'clone' commands.
@@ -211,8 +213,6 @@ gdpm list remote-sources
 - [ ] Complete integration with the Asset API including moderation tools.
 
 - [ ] Login and register for access to repositories.
-
-- [ ] Handle dependencies between multiple assets. 
 
 - [ ] Support for paid assets. 
 
