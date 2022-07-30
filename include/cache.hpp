@@ -17,7 +17,7 @@ namespace gdpm::cache{
 	std::vector<package_info> get_installed_packages(const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
 	int update_package_info(const std::vector<package_info>& packages, const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
 	int update_sync_info(const std::vector<std::string>& download_urls, const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
-	int delete_packages(const std::vector<std::string>& package_titles, const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_TABLENAME);
+	int delete_packages(const std::vector<std::string>& package_titles, const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
 	int delete_packages(const std::vector<size_t>& package_ids, const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
 	int drop_package_database(const std::string& cache_path = GDPM_PACKAGE_CACHE_PATH, const std::string& table_name = GDPM_PACKAGE_CACHE_TABLENAME);
 

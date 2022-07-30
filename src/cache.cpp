@@ -320,7 +320,7 @@ namespace gdpm::cache{
 		char *errmsg = nullptr;
 		std::string sql;
 
-		int rc = sqlite3_open(cache_path, &db);
+		int rc = sqlite3_open(cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
 			log::error("delete_packages.sqlite3_open(): {}", sqlite3_errmsg(db));
 			sqlite3_close(db);
