@@ -15,10 +15,11 @@ namespace gdpm::cache{
 		char *errmsg;
 
 		/* Check and make sure directory is created before attempting to open */
-		using namespace fs = std::filesystem;
-		if(!fs::exists(fs::path(cache_path).parent_path())){
+		namespace fs = std::filesystem;
+		fs::path dir_path = fs::path(cache_path).parent.path();
+		if(!fs::exists(dir_path){
 			log::info("Creating cache directories...{}", cache_path);
-			fs::create_directories(cache_path);
+			fs::create_directories(dir_path);
 		}
 
 		int rc = sqlite3_open(cache_path.c_str(), &db);
