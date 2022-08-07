@@ -61,7 +61,10 @@ namespace gdpm::config{
 		std::fstream file;
 		file.open(path, std::ios::in);
 		if(!file){
-			log::error("Could not open file");
+			if(verbose){
+				log::info("No configuration file found. Creating a new one.");
+				save(make_context(), verbose);
+			}
 			return config;
 		}
 		else if(file.is_open()){
@@ -158,7 +161,7 @@ namespace gdpm::config{
 		return 0;
 	}
 
-	config_context make_config(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::set<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
+	config_context make_context(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::set<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
 		config_context config {
 			.username = username,
 			.password = password,

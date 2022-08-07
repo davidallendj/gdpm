@@ -1,20 +1,20 @@
 # Godot Package Manager (GDPM)
 
-GDPM is an attempt to make a front-end, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the AssetLib with the ability to automate builds on different systems. So far, the package manager is capable of searching, downloading, installing and removing packages and makes managing Godot assets across multiple projects much easier. GDPM has not been tested on Windows yet and there are no currently plans to support macOS.
+GDPM is an attempt to make a front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different systems. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. GDPM has not been tested to work on Windows or Mac.
 
 ## Why not just use the Asset Library?
 
-The AssetLib is a bit limited for my use case. Personally, I wanted a way to quickly download and install all the assets I'd need for a project once and only once. Then, when I'd need that same asset for another project, I could just reuse the ones installed for the previous project. This is where the issues begin. The AssetLib doesn't have a way to reuse asset across multiple projects without having to either redownload the asset again from the AssetLib or copy the assets from somewhere locally. Likewise, this would force game developers to have to copy their assets manually from one project to another and keep track of their assets themselves. 
+The AssetLib actually works well enough for most use cases. However, it's common to download the same asset multiple times for different projects. If there isn't a need to modify the asset itself, it makes more sense to download the asset only once. That way, there will only be one copy of the asset and it can be linked to all new projects. The AssetLib does not have a way to manage assets like this, and therefore requires redownload assets for each new project. Additionally, the AssetLib is integrated into the engine itself with no command-line interface. When downloading multiple assets, it is much more convenient to be able to automate the downloads using a list from a text file. If the user knows, which assets to download, they can make a list and point to it.
 
-Some assets are more common such as the "First Person Controller" are likely to be reused with little to no modification. Therefore, it made sense to provide some method to download and install the assets once and then provide a symbolic link back to the stored packages. GDPM attempts to fix this by storing the assets in a single location and creating symlinks/shortcuts to each project. By have a separate, simple binary executable, the package manager can be used in shell scripts to automate tasks and download assets quickly.
+Some assets are more common such as the "First Person Controller" are likely to be reused with little to no modification. Therefore, it made sense to provide some method to download and install the assets once and then provide a symbolic link back to the stored packages. GDPM attempts to fix this by storing the assets in a single location and creating symlinks/shortcuts to each project. By having a separate, simple binary executable, the package manager can be used in shell scripts to download assets more quickly.
 
-Currently, there is no dependency management as it is not needed. There are future plans to implement a system to handle dependencies, but the implementation is still being fleshed out.
+Currently, there is no dependency management as it is not needed yet. There are future plans to implement a system to handle dependencies, but the implementation is still being fleshed out.
 
 ## How It Works
 
-GDPM is built to work with an instance of [Godot's Asset API](https://github.com/godotengine/godot-asset-library). When installing packages, GDPM will first make HTTP requests to retrieve required asset data to download the asset and sync it in with a local database. Then, it will make another API request to retrieve the rest of an asset's data, update it in the database, then download it from the remote repository. Unfortunately, the package manager requires at least 2 request for a single asset. Therefore, there's an intentional 200 ms delay by default between each request to not bombard the API server, but is configurable at compile time (see "Building from source" section below).
+GDPM is built to work with an instance of [Godot's Asset API](https://github.com/godotengine/godot-asset-library). When installing packages, GDPM will first make HTTP requests to retrieve required asset data to download the asset and sync it in with a local database. Then, it will make another API request to retrieve the rest of an asset's data, update it in the database, then download it from the remote repository. Unfortunately, the package manager requires at least 2 request for a single asset. Therefore, there's an intentional 200 ms delay by default between each request to not bombard the API server, but is configurable at compile time (see "[Building from Source](#building-from-source)" section below).
 
-When removing a package, the unzip files are remove but the temporary files are keep in the .tmp directory unless using the '--clean' option. This allows the user to remove the uncompressed files, but easily reinstall the package without having to download it remotely again.
+When removing a package, the unzip files are remove but the temporary files are keep in the specified `.tmp` directory unless using the `--clean` option. This allows the user to remove the uncompressed files, but easily reinstall the package without having to download it remotely again.
 
 The local database stores all the information sent by the Asset API with additional information like "install_path" and "remote_source" for the API used to gather information. 
 
@@ -28,11 +28,9 @@ The local database stores all the information sent by the Asset API with additio
 
 - Create package groups to copy a set of packages into a Godot project.
 
-- 
-
 ## Building from Source
 
-The project uses the CMake or Meson build system and has been tested with GCC and Clang on Arch/Manjaro Linux. Meson is preferred, but a CMakeLists.txt is provided due to CMake's popularity and should work with some tweaking. Building on Windows has not been tested yet so it's not guaranteed to work. Compiling with CMake will build an executable, shared, and archive library, while compiling with Meson only builds an executable that links with a shared library.
+The project uses the CMake or Meson build system and has been tested with GCC and Clang on Arch/Manjaro Linux. Meson is preferred, but a CMakeLists.txt is provided due to CMake's popularity and should work with some tweaking. Building on Windows or Mac has not been tested yet so it's not guaranteed to work. Compiling with CMake will build an executable, shared, and archive library, while compiling with Meson only builds an executable that links with a shared library.
 
 ### Prerequisites
 
@@ -58,8 +56,8 @@ After installing all necessary dependencies, run the following commands:
 
 ```bash
 # Start by cloning the repo, then...
-git clone $(repo_name)
-cd $(repo_name)
+git clone https://github.com/davidallendj/gdpm
+cd https://github.com/davidallendj/gdpm
 
 # ...if using Meson with Clang on Linux...
 meson build
@@ -131,7 +129,7 @@ To see more help information:
 gdpm help
 ```
 
-Packages can be installed using the "install" command and providing a list of comma-delimited package names with no spaces or by providing a one-package-per-line file using the '--file' option. Using the '-y' option will bypass the user prompt. The '--no-sync' option with bypass syncing the local package database with the AssetLib API and use locally stored information only. See the '--search' command to find a list of available packages.
+Packages can be installed using the `install` command and providing a list of comma-delimited package names with no spaces or by providing a one-package-per-line file using the `--file` option. Using the `-y` option will bypass the user prompt. The `--no-sync` option with bypass syncing the local package database with the AssetLib API and use locally stored information only. See the `search` command to find a list of available packages.
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
@@ -142,7 +140,7 @@ Packages can be removed similiarly to installing.
 
 ```bash
 gdpm remove "Flappy Godot" "GodotNetworking" -y
-gdpm remove -f packages.txt
+gdpm remove -f packages.txt --config config.json --no-sync --no-prompt
 ```
 
 Packages can be updated like installing or removing packages. However, if no argument is passed, GDPM will prompt the user to update ALL packages to latest instead.
@@ -205,6 +203,13 @@ gdpm list packages --verbose
 gdpm list remote-sources
 ```
 
+If you want to try `gdpm` without installing it to your system, make a symlink to the built executable and add the `bin` directory to your PATH variable.
+
+```bash
+ln -s path/to/build/gdpm path/to/bin/gdpm
+export PATH=$PATH:path/to/bin/gdpm
+```
+
 ## Planned Features
 
 - [ ] Dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
@@ -218,6 +223,10 @@ gdpm list remote-sources
 - [ ] Login and register for access to repositories.
 
 - [ ] Support for paid assets. 
+
+## Known Issues
+
+- The `help` command does not should the command/options correctly. Commands do not use the double hypen, `--command` format. Commands should be use like `gdpm command --option` instead.
 
 ## License
 

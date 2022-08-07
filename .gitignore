@@ -1,4 +1,5 @@
 build/**
+bin/gdpm
 tests
 */tmp/**
 vgcore.*

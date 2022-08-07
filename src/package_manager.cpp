@@ -46,7 +46,7 @@ namespace gdpm::package_manager{
 	int initialize(int argc, char **argv){
 		// curl_global_init(CURL_GLOBAL_ALL);
 		curl = curl_easy_init();
-		config = config::make_config();
+		config = config::make_context();
 		params = rest_api::make_context();
 		command = none;
 
@@ -87,7 +87,7 @@ namespace gdpm::package_manager{
 		params.verbose = config.verbose;
 		
 
-		/* TODO: Need a way to use remote sources from config until no left */
+		/* TODO: Need a way to use remote sources from config until none left */
 
 		/* Check if the package data is already stored in cache. If it is, there 
 		is no need to do a lookup to synchronize the local database since we 
@@ -130,7 +130,7 @@ namespace gdpm::package_manager{
 		using ss_pair = std::pair<std::string, std::string>;
 		std::vector<ss_pair> dir_pairs;
 		for(auto& p : p_found){
-			log::info_n("Fetching asset data for \"{}\"...", p.title);
+			log::info("Fetching asset data for \"{}\"...", p.title);
 
 			/* TODO: Try fetching the data with all available remote sources until retrieved */
 			for(const auto& remote_url : config.remote_sources){
@@ -189,7 +189,7 @@ namespace gdpm::package_manager{
 				if(!std::filesystem::exists(package_dir))
 					std::filesystem::create_directory(package_dir);
 				
-				std::ofstream ofs(package_dir + "/package.json");
+				std::ofstream ofs(package_dir + "/asset.json");
 				OStreamWrapper osw(ofs);
 				PrettyWriter<OStreamWrapper> writer(osw);
 				doc.Accept(writer);
@@ -200,7 +200,7 @@ namespace gdpm::package_manager{
 				}
 				else{
 					/* Download all the package files and place them in tmp directory. */
-					log::print("Downloading \"{}\"...", p.title);
+					log::info_n("Downloading \"{}\"...", p.title);
 					std::string download_url = p.download_url;// doc["download_url"].GetString();
 					std::string title = p.title;// doc["title"].GetString();
 					http::response response = http::download_file(download_url, tmp_zip);
@@ -224,9 +224,9 @@ namespace gdpm::package_manager{
 			utils::extract_zip(p.first.c_str(), p.second.c_str());
 		
 		/* Update the cache data with information from  */ 
-		log::info_n("Updating local package database...");
+		log::info_n("Updating local asset data...");
 		cache::update_package_info(p_found);
-		log::println("Done.");
+		log::println("done.");
 	}
 
 
@@ -307,9 +307,9 @@ namespace gdpm::package_manager{
 			p.is_installed = false;
 		}
 		log::println("Done.");
-		log::info_n("Updating local package database...");
+		log::info_n("Updating local asset data...");
 		cache::update_package_info(p_cache);
-		log::println("Done.");
+		log::println("done.");
 	}
 
 
@@ -376,7 +376,7 @@ namespace gdpm::package_manager{
 			request_url += rest_api::endpoints::GET_Asset;
 			Document doc = rest_api::get_assets_list(request_url, params);
 			if(doc.IsNull()){
-				log::error("Could not search for packages. Are you connected to the internet?");
+				log::error("Could not search for packages.");
 				return;
 			}
 
@@ -566,28 +566,29 @@ namespace gdpm::package_manager{
 		/* Parse command-line arguments using cxxopts */
 		cxxopts::Options options(
 			argv[0], 
-			"Package manager made for managing Godot assets."
+			"Experimental package manager made for managing assets for the Godot game engine.\n"
 		);
 		options.allow_unrecognised_options();
-		options.custom_help("This is a custom help string.");
+		options.custom_help("[COMMAND] [OPTIONS...]");
 		options.add_options("Command")
-			("input", "", cxxopts::value<std::vector<std::string>>())
+			("command", "Specify the input parameters", cxxopts::value<std::vector<std::string>>())
 			("install", "Install package or packages.", cxxopts::value<std::vector<std::string>>()->implicit_value(""), "<packages...>")
 			("remove", "Remove a package or packages.", cxxopts::value<std::vector<std::string>>()->implicit_value(""), "<packages...>")
-			("update", "Update a package or packages. This option will update all packages if no argument is supplied.", cxxopts::value<std::vector<std::string>>()->implicit_value(""), "<packages...>")
+			("update", "Update a package or packages. This will update all packages if no argument is provided.", cxxopts::value<std::vector<std::string>>()->implicit_value(""), "<packages...>")
 			("search", "Search for a package or packages.", cxxopts::value<std::vector<std::string>>(), "<packages...>")
-			("list", "Show list of is_installed packages.")
-			("link", "Create a symlink (or shortcut) to target directory.", cxxopts::value<std::vector<std::string>>(), "<packages...>")
-			("clone", "Clone packages into target directory.", cxxopts::value<std::vector<std::string>>(), "<packages...>")
+			("list", "Show list of installed packages.")
+			("link", "Create a symlink (or shortcut) to target directory. Must be used with the `--path` argument.", cxxopts::value<std::vector<std::string>>(), "<packages...>")
+			("clone", "Clone packages into target directory. Must be used with the `--path` argument.", cxxopts::value<std::vector<std::string>>(), "<packages...>")
 			("clean", "Clean temporary downloaded files.")
-			("sync", "Sync local database with remote server.")
+			("fetch", "Fetch asset data from remote sources.")
 			("add-remote", "Set a source repository.", cxxopts::value<std::string>()->default_value(constants::AssetRepo), "<url>")
 			("delete-remote", "Remove a source repository from list.", cxxopts::value<std::string>(), "<url>")
-			("remote", "One time remote source use. Source is not saved and override sources used in config.", cxxopts::value<std::vector<std::string>>(), "<url>")
+			("quick-remote", "One time remote source use. Source is not saved and override sources used in config.", cxxopts::value<std::vector<std::string>>(), "<url>")
 			("h,help", "Print this message and exit.")
-			("version", "Show the version and exit.")
+			("version", "Show the current version and exit.")
 		;
-		options.parse_positional({"input"});
+		options.parse_positional({"command"});
+		options.positional_help("");
 		options.add_options("Options")
 			("c,config", "Set the config file path.", cxxopts::value<std::string>())
 			("f,file", "Read file to install or remove packages.", cxxopts::value<std::string>(), "<path>")
@@ -711,12 +712,12 @@ namespace gdpm::package_manager{
 			log::println("{}", json);
 		}
 
-		if(!result.count("input")){
+		if(!result.count("command")){
 			log::error("Command required. See \"help\" for more information.");
 			return;
 		}
 
-		std::vector<std::string> argv = result["input"].as<std::vector<std::string>>();
+		std::vector<std::string> argv = result["command"].as<std::vector<std::string>>();
 		std::vector<std::string> opts{argv.begin()+1, argv.end()};
 		if(packages.empty() && opts.size() > 0){
 			for(const auto& opt : opts){
@@ -818,7 +819,7 @@ namespace gdpm::package_manager{
 		int total_items = 0;
 		int items_left = 0;
 
-		log::info_n("Sychronizing database...");
+		log::info("Sychronizing database...");
 		do{
 			/* Make the GET request to get page data and store it in the local 
 			package database. Also, check to see if we need to keep going. */
@@ -828,7 +829,7 @@ namespace gdpm::package_manager{
 			params.page += 1;
 
 			if(doc.IsNull()){
-				log::error("\nCould not get response from server. Aborting.");
+				log::error("Could not get response from server. Aborting.");
 				return {};
 			}
 
