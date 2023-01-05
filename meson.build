@@ -9,6 +9,7 @@ deps = [
 	dependency('RapidJSON'),
 	dependency('fmt'),
 	dependency('Catch2'),
+	dependency('doctest'),
 	dependency('cxxopts'),
 	# dependency('curl'),
 	dependency('curlpp'),

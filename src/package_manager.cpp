@@ -33,7 +33,7 @@ namespace gdpm::package_manager{
 	std::vector<std::string> repo_sources;
 	CURL *curl;
 	CURLcode res;
-	config::config_context config;
+	config::context config;
 	rest_api::rest_api_context params;
 	command_e command;
 	std::vector<std::string> packages;
@@ -66,6 +66,7 @@ namespace gdpm::package_manager{
 		handle_arguments(args);
 		return 0;
 	}
+
 
 	int execute(){
 		run_command(command, packages, opts);
@@ -118,8 +119,10 @@ namespace gdpm::package_manager{
 		}
 		
 		log::println("Packages to install: ");
-		for(const auto& p : p_found)
+		for(const auto& p : p_found){
+			std::string output((p.is_installed) ? p.title + " (reinstall)" : p.title);
 			log::print("  {}  ", (p.is_installed) ? p.title + " (reinstall)" : p.title);
+		}
 		log::println("");
 		
 		if(!skip_prompt){
@@ -566,7 +569,7 @@ namespace gdpm::package_manager{
 		/* Parse command-line arguments using cxxopts */
 		cxxopts::Options options(
 			argv[0], 
-			"Experimental package manager made for managing assets for the Godot game engine.\n"
+			"Experimental package manager made for managing assets for the Godot game engine through the command-line.\n"
 		);
 		options.allow_unrecognised_options();
 		options.custom_help("[COMMAND] [OPTIONS...]");
@@ -880,3 +883,5 @@ namespace gdpm::package_manager{
 	}
 
 } // namespace gdpm::package_manager
+
+

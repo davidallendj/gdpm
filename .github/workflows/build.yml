@@ -1,0 +1,11 @@
+name: github-ci
+
+on: [push]
+
+
+jobs:
+  build:
+
+
+  steps:
+  - uses: actions/checkout@v1

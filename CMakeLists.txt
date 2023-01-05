@@ -13,6 +13,7 @@ endif()
 
 # Get source files except for main.cpp
 file(GLOB SRC CONFIG_DEPENDS "src/[!main]*.cpp")
+file(GLOB TESTS CONFIG_DEPENDS "tests/*.cpp")
 
 # Find all the packages required to build
 find_package(Threads REQUIRED)
@@ -22,24 +23,24 @@ find_package(Catch2 CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
 find_package(Poco CONFIG REQUIRED COMPONENTS Net JSON Util)
 find_package(libzip CONFIG REQUIRED)
-find_package(unofficial-sqlite3 CONFIG REQUIRED)	# ...used with vcpkg unsuccessfully...
+find_package(SQLiteCpp CONFIG REQUIRED)
 
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_BUILD_RPATH "build/cmake")
 set(CMAKE_CXX_FLAGS 
-	"${CMAKE_CXX_FLAGS} -std=c++20 -Ofast -fPIC -fPIE -fpermissive -Wall -Wno-switch -Wno-unused-variable -Wno-sign-conversion -pedantic-errors"
+	"${CMAKE_CXX_FLAGS} -std=c++20 -Ofast -fPIC -fPIE -fpermissive -Wall -Wno-switch -Wno-unused-variable -Wno-unused-function -Wno-sign-conversion -pedantic-errors"
 )
 set(INCLUDE_DIRS
 	"include"
+	"/usr/include/doctest"
 	${RAPIDJSON_INCLUDE_DIRS}
-	${SQLite3_INCLUDE_DIRS}
 )
 set(LINK_LIBS 
 	fmt::fmt 
 	Threads::Threads 
 	Catch2::Catch2 
 	cxxopts::cxxopts
-	unofficial::sqlite3::sqlite3
+	SQLiteCpp
 	-lcurlpp
 	-lzip
 )
@@ -48,16 +49,19 @@ set(LINK_LIBS
 add_library(${PROJECT_NAME}-shared SHARED "${SRC}")
 add_library(${PROJECT_NAME}-static STATIC "${SRC}")
 add_executable(${PROJECT_NAME} "src/main.cpp")
+add_executable(${PROJECT_NAME}-tests "${TESTS}")
 
 # Set include directories for targets
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-shared PRIVATE ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-static PRIVATE ${INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME}-tests PRIVATE ${INCLUDE_DIRS})
 
 # Set link libraries for targets
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-shared PRIVATE ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-static PRIVATE ${LINK_LIBS})
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE ${LINK_LIBS})
 
 # Add project unit tests
 # add_custom_target("${PROJECT_NAME}-tests" SOURCE ${TESTS})

@@ -1,0 +1,45 @@
+variables:
+  PROJECT_ROOT_PATH: /home/$USER/gdpm
+
+
+stages:
+  - build
+  - test
+  - package
+
+
+cache:
+  paths:
+    - .cache
+
+
+before-script:
+  - echo "Setting up dependencies..."
+  - git clone $
+
+
+build-job:
+  stage: build
+  script:
+    - echo -e "Building executable and libraries...\n$PWD"
+    - bin/compile.sh
+
+
+test-job:
+  stage: test
+  script:
+    - echo "Running unit tests..."
+    - bin/gdpm-tests
+
+
+package-job:
+  stage: package
+  script:
+    - echo "Packaging binaries..."
+
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo "Deploying application..."
+  environment: production

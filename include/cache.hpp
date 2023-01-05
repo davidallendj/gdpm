@@ -1,4 +1,6 @@
 
+#pragma once
+
 #include "constants.hpp"
 #include <sqlite3.h>
 #include <vector>

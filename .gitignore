@@ -1,5 +1,8 @@
 build/**
+builds/**
 bin/gdpm
+bin/gdpm-tests
+cache/**
 tests
 */tmp/**
 vgcore.*

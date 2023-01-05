@@ -27,7 +27,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_buffer);
-			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent);
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
@@ -61,7 +61,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_buffer);
-			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent);
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
@@ -109,7 +109,7 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_stream);
-			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent);
+			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
 			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);

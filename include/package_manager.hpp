@@ -14,7 +14,7 @@ namespace gdpm::package_manager{
 	extern std::vector<std::string> repo_sources;
 	extern CURL *curl;
 	extern CURLcode res;
-	extern config::config_context config;
+	extern config::context config;
 
 	struct package_info{
 		size_t asset_id;

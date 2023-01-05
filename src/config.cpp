@@ -26,8 +26,8 @@
 
 
 namespace gdpm::config{
-	config_context config;
-	std::string to_json(const config_context& params){
+	context config;
+	std::string to_json(const context& params){
 		auto _build_json_array = [](std::set<std::string> a){
 			std::string o{"["};
 			for(const std::string& src : a)
@@ -57,7 +57,8 @@ namespace gdpm::config{
 		return json;
 	}
 
-	config_context load(std::filesystem::path path, int verbose){
+
+	context load(std::filesystem::path path, int verbose){
 		std::fstream file;
 		file.open(path, std::ios::in);
 		if(!file){
@@ -75,7 +76,7 @@ namespace gdpm::config{
 			 */
 			using namespace rapidjson;
 			
-			/* Read JSON fro config, parse, and check document. Must make sure that program does not crash here and use default config instead! */
+			/* Read JSON from config, parse, and check document. Must make sure that program does not crash here and use default config instead! */
 			std::string contents, line;
 			while(std::getline(file, line))
 				contents += line + "\n";
@@ -99,7 +100,7 @@ namespace gdpm::config{
 			// if(!status){
 			// 	log::error("config::load: Could not parse contents of file (Error: {}/{}).", GetParseError_En(status), doc.GetErrorOffset());
 
-			// 	return config_context();
+			// 	return context();
 			// }
 
 			/* Must check if keys exists first, then populate _config_params. */
@@ -141,7 +142,8 @@ namespace gdpm::config{
 		return config;
 	}
 
-	int save(const config_context& config, int verbose){
+
+	int save(std::filesystem::path path, const context& config, int verbose){
 		using namespace rapidjson;
 
 		/* Build a JSON string to pass to document */
@@ -152,7 +154,7 @@ namespace gdpm::config{
 		/* Dump JSON config to file */
 		Document doc;
 		doc.Parse(json.c_str());
-		std::ofstream ofs(config.path);
+		std::ofstream ofs(path);
 		OStreamWrapper osw(ofs);
 
 		PrettyWriter<OStreamWrapper> writer(osw);
@@ -161,8 +163,9 @@ namespace gdpm::config{
 		return 0;
 	}
 
-	config_context make_context(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::set<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
-		config_context config {
+
+	context make_context(const std::string& username, const std::string& password, const std::string& path, const std::string& token, const std::string& godot_version, const std::string& packages_dir, const std::string& tmp_dir, const std::set<std::string>& remote_sources, size_t threads, size_t timeout, bool enable_sync, bool enable_file_logging, int verbose){
+		context config {
 			.username = username,
 			.password = password,
 			.path = path,

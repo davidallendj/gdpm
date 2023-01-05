@@ -29,7 +29,8 @@ namespace gdpm::log
 #if GDPM_LOG_LEVEL > 0
 		vlog(
 			fmt::format(GDPM_COLOR_LOG_INFO "[INFO {}] {}\n" GDPM_COLOR_LOG_RESET, utils::timestamp(), format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 #endif
 	}
@@ -38,7 +39,8 @@ namespace gdpm::log
 	static constexpr void info_n(const S& format, Args&&...args){
 		vlog(
 			fmt::format(GDPM_COLOR_LOG_INFO "[INFO {}] {}" GDPM_COLOR_LOG_RESET, utils::timestamp(), format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 	}
 
@@ -47,7 +49,8 @@ namespace gdpm::log
 #if GDPM_LOG_LEVEL > 1
 		vlog(
 			fmt::format(GDPM_COLOR_LOG_ERROR "[ERROR {}] {}\n" GDPM_COLOR_LOG_RESET, utils::timestamp(), format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 #endif
 	}
@@ -57,7 +60,8 @@ namespace gdpm::log
 #if GDPM_LOG_LEVEL > 1
 		vlog(
 			fmt::format(GDPM_COLOR_LOG_DEBUG "[DEBUG {}] {}\n" GDPM_COLOR_LOG_RESET, utils::timestamp(), format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 #endif
 	}
@@ -66,7 +70,8 @@ namespace gdpm::log
 	static constexpr void print(const S& format, Args&&...args){
 		vlog(
 			fmt::format("{}", format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 	}
 
@@ -74,7 +79,8 @@ namespace gdpm::log
 	static constexpr void println(const S& format, Args&&...args){
 		vlog(
 			fmt::format("{}\n", format),
-			fmt::make_args_checked<Args...>(format, args...)
+			// fmt::make_format_args<Args...>(args...)
+			fmt::make_format_args(args...)
 		);
 	}
 
