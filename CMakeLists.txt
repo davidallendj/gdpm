@@ -61,7 +61,7 @@ target_include_directories(${PROJECT_NAME}-tests PRIVATE ${INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-shared PRIVATE ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-static PRIVATE ${LINK_LIBS})
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE ${LINK_LIBS})
+target_link_libraries(${PROJECT_NAME}-tests PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
 
 # Add project unit tests
 # add_custom_target("${PROJECT_NAME}-tests" SOURCE ${TESTS})

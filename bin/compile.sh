@@ -12,5 +12,6 @@ cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G Ninja
 ninja -C build
 
 # Create symlinks to executables in build folder if necessary
+rm bin/gdpm bin/gdpm-tests
 ln -s ../build/gdpm bin/gdpm
 ln -s ../build/gdpm-tests bin/gdpm-tests

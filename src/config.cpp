@@ -58,15 +58,17 @@ namespace gdpm::config{
 	}
 
 
-	context load(std::filesystem::path path, int verbose){
+	gdpm::error load(std::filesystem::path path, context& config, int verbose){
 		std::fstream file;
+		gdpm::error error;
 		file.open(path, std::ios::in);
 		if(!file){
 			if(verbose){
 				log::info("No configuration file found. Creating a new one.");
-				save(make_context(), verbose);
+				config = make_context();
+				save(config.path, config, verbose);
 			}
-			return config;
+			return error;
 		}
 		else if(file.is_open()){
 			/* 
@@ -89,7 +91,7 @@ namespace gdpm::config{
 
 			if(!doc.IsObject()){
 				log::error("Could not load config file.");
-				return config;
+				return error;
 			}
 
 			assert(doc.IsObject());
@@ -139,11 +141,11 @@ namespace gdpm::config{
 			config.enable_sync 			= _get_value_int(doc, "enable_sync");
 			config.enable_file_logging 	= _get_value_int(doc, "enable_file_logging");
 		}
-		return config;
+		return error;
 	}
 
 
-	int save(std::filesystem::path path, const context& config, int verbose){
+	gdpm::error save(std::filesystem::path path, const context& config, int verbose){
 		using namespace rapidjson;
 
 		/* Build a JSON string to pass to document */
@@ -160,7 +162,7 @@ namespace gdpm::config{
 		PrettyWriter<OStreamWrapper> writer(osw);
 		doc.Accept(writer);
 
-		return 0;
+		return gdpm::error();
 	}
 
 

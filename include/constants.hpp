@@ -6,7 +6,7 @@
 
 namespace gdpm::constants{
 	const std::string HomePath(std::string(std::getenv("HOME")) + "/");
-	const std::string TestPath(HomePath + ".config/gdpm/tests")
+	const std::string TestPath(HomePath + ".config/gdpm/tests");
 	const std::string ConfigPath(HomePath + ".config/gdpm/config.json");
 	const std::string LockfilePath(HomePath + ".config/gdpm/gdpm.lck");
 	const std::string LocalPackagesDir(HomePath + ".config/gdpm/packages");

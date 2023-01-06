@@ -1,3 +1,4 @@
+#!/bin/bash
 command=build/gdpm
 
 # Install packages using install command and specifying each package name or file

@@ -3,7 +3,8 @@ builds/**
 bin/gdpm
 bin/gdpm-tests
 cache/**
-tests
+tests/*
+!tests/*.cpp
 */tmp/**
 vgcore.*
 .cache

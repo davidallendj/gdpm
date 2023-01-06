@@ -15,7 +15,7 @@ TEST_CASE("Confirm doctest unit testing"){
 
 
 TEST_CASE("Test cache database functions"){
-	gdpm::cache::create_package_database()
+	gdpm::cache::create_package_database();
 }
 
 
@@ -24,6 +24,6 @@ TEST_CASE("Test configuration functions"){
 	config.path = gdpm::constants::TestPath + "/";
 
 	std::string json = gdpm::config::to_json(config);
-	int status = gdpm::config::save(config);
-	gdpm::config::context new_config = gdpm::config::load(config.path, config)
+	gdpm::error error_save = gdpm::config::save(config.path, config);
+	gdpm::error error_load = gdpm::config::load(config.path, config);
 }

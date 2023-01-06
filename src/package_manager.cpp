@@ -52,9 +52,9 @@ namespace gdpm::package_manager{
 
 		/* Check for config and create if not exists */
 		if(!std::filesystem::exists(config.path)){
-			config::save(config);
+			config::save(config.path, config);
 		}
-		config = config::load(config.path);
+		config::load(config.path, config);
 		config.enable_sync = true;
 		std::string json = to_json(config);
 
@@ -78,7 +78,7 @@ namespace gdpm::package_manager{
 
 	void finalize(){
 		curl_easy_cleanup(curl);
-		config::save(config);
+		config::save(config.path, config);
 		// curl_global_cleanup();
 	}
 
@@ -622,7 +622,7 @@ namespace gdpm::package_manager{
 		/* Set option variables first to be used in functions below. */
 		if(result.count("config")){
 			config.path = result["config"].as<std::string>();
-			config = config::load(config.path);
+			config::load(config.path, config);
 			log::info("Config: {}", config.path);
 		}
 		if(result.count("add-remote")){
