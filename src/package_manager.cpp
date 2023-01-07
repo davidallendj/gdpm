@@ -83,9 +83,10 @@ namespace gdpm::package_manager{
 	}
 
 
-	void install_packages(const std::vector<std::string>& package_titles){
-		using namespace rapidjson; 
+	error install_packages(const std::vector<std::string>& package_titles, bool skip_prompt){
+		using namespace rapidjson;
 		params.verbose = config.verbose;
+		error error;
 		
 
 		/* TODO: Need a way to use remote sources from config until none left */
@@ -115,7 +116,9 @@ namespace gdpm::package_manager{
 		/* Found nothing to install so there's nothing to do at this point. */
 		if(p_found.empty()){
 			log::error("No packages found to install.");
-			return;
+			error.set_code(-1);
+			error.set_message("No packages found to install.");
+			return error;
 		}
 		
 		log::println("Packages to install: ");
@@ -127,7 +130,7 @@ namespace gdpm::package_manager{
 		
 		if(!skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to install these packages? (y/n)"))
-				return;
+				return error;
 		}
 
 		using ss_pair = std::pair<std::string, std::string>;
@@ -150,7 +153,8 @@ namespace gdpm::package_manager{
 					if(doc.HasParseError() || doc.IsNull()){
 						log::println("");
 						log::error("Error parsing HTTP response. (error code: {})", doc.GetParseError());
-						return;
+						error.set_code(doc.GetParseError());
+						return error;
 					}
 					p.category			= doc["category"].GetString();
 					p.description 		= doc["description"].GetString();
@@ -211,7 +215,9 @@ namespace gdpm::package_manager{
 						log::println("Done.");
 					}else{
 						log::error("Something went wrong...(code {})", response.code);
-						return;
+						error.set_code(response.code);
+						error.set_message("Error in HTTP response.");
+						return error;
 					}
 				}
 
@@ -230,25 +236,34 @@ namespace gdpm::package_manager{
 		log::info_n("Updating local asset data...");
 		cache::update_package_info(p_found);
 		log::println("done.");
+
+		return error;
 	}
 
 
-	void remove_packages(const std::vector<std::string>& package_titles){
+	error remove_packages(const std::vector<std::string>& package_titles, bool skip_prompt){
 		using namespace rapidjson;
 		using namespace std::filesystem;
 
+		error error;
 		if(package_titles.empty()){
+			std::string message("No packages to remove.");
 			log::println("");
-			log::error("No packages to remove.");
-			return;
+			log::error(message);
+			error.set_code(-1);
+			error.set_message(message);
+			return error;
 		}
 
 		/* Find the packages to remove if they're is_installed and show them to the user */
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
 		if(p_cache.empty()){
+			std::string message("Could not find any packages to remove.");
 			log::println("");
-			log::error("Could not find any packages to remove.");
-			return;
+			log::error(message);
+			error.set_code(-1);
+			error.set_message(message);
+			return error;
 		}
 
 		/* Count number packages in cache flagged as is_installed. If there are none, then there's nothing to do. */
@@ -258,9 +273,12 @@ namespace gdpm::package_manager{
 		});
 
 		if(p_count == 0){
+			std::string message("No packages to remove.");
 			log::println("");
-			log::error("No packages to remove.");
-			return;
+			log::error(message);
+			error.set_code(-1);
+			error.set_message(message);
+			return error;
 		}
 		
 		log::println("Packages to remove:");
@@ -271,7 +289,7 @@ namespace gdpm::package_manager{
 		
 		if(!skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to remove these packages? (y/n)"))
-				return;
+				return error;
 		}
 
 		log::info_n("Removing packages...");
@@ -313,21 +331,28 @@ namespace gdpm::package_manager{
 		log::info_n("Updating local asset data...");
 		cache::update_package_info(p_cache);
 		log::println("done.");
+
+		return error;
 	}
 
 
-	void update_packages(const std::vector<std::string>& package_titles){
+	error update_packages(const std::vector<std::string>& package_titles, bool skip_prompt){
 		using namespace rapidjson;
+		error error;
+
 		/* If no package titles provided, update everything and then exit */
 		if(package_titles.empty()){
 			std::string url{constants::HostUrl};
 			url += rest_api::endpoints::GET_AssetId;
 			Document doc = rest_api::get_assets_list(url, params);
 			if(doc.IsNull()){
-				log::error("Could not get response from server. Aborting.");
-				return;
+				std::string message("Could not get response from server. Aborting.");
+				log::error(message);
+				error.set_code(-1);
+				error.set_message(message);
+				return error;
 			}
-			return;
+			return error;
 		}
 
 		/* Fetch remote asset data and compare to see if there are package updates */
@@ -352,20 +377,22 @@ namespace gdpm::package_manager{
 
 		if(!skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to update the following packages? (y/n)"))
-				return;
+				return error;
 		}
 
 		remove_packages(p_updates);
 		install_packages(p_updates);
+		return error;
 	}
 
 
-	void search_for_packages(const std::vector<std::string> &package_titles){
+	error search_for_packages(const std::vector<std::string> &package_titles, bool skip_prompt){
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
+		error error;
 		
 		if(!p_cache.empty() && !config.enable_sync){
 			print_package_list(p_cache);
-			return;
+			return error;
 		}
 		for(const auto& p_title : package_titles){
 			using namespace rapidjson;
@@ -379,13 +406,17 @@ namespace gdpm::package_manager{
 			request_url += rest_api::endpoints::GET_Asset;
 			Document doc = rest_api::get_assets_list(request_url, params);
 			if(doc.IsNull()){
-				log::error("Could not search for packages.");
-				return;
+				std::string message("Could not search for packages.");
+				log::error(message);
+				error.set_code(-1);
+				error.set_message(message);
+				return error;
 			}
 
 			log::info("{} package(s) found...", doc["total_items"].GetInt());
 			print_package_list(doc);
 		}
+		return error;
 	}
 
 
@@ -751,10 +782,10 @@ namespace gdpm::package_manager{
 	/* Used to run the command AFTER parsing and setting all command line args. */
 	void run_command(command_e c, const std::vector<std::string>& package_titles, const std::vector<std::string>& opts){
 		switch(c){
-			case install: 	install_packages(package_titles); 		break;
-			case remove: 	remove_packages(package_titles); 		break;
-			case update:	update_packages(package_titles); 		break;
-			case search: 	search_for_packages(package_titles); 	break;
+			case install: 	install_packages(package_titles, skip_prompt); 		break;
+			case remove: 	remove_packages(package_titles, skip_prompt); 		break;
+			case update:	update_packages(package_titles, skip_prompt); 		break;
+			case search: 	search_for_packages(package_titles, skip_prompt); 	break;
 			case list: 		list_information(package_titles); 		break;
 							/* ...opts are the paths here */
 			case link:		link_packages(package_titles, opts);	break;

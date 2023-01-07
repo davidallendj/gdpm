@@ -75,13 +75,18 @@ namespace gdpm::log
 		);
 	}
 
-	template <typename S, typename...Args>
+	template <typename S = std::string, typename...Args>
 	static constexpr void println(const S& format, Args&&...args){
 		vlog(
 			fmt::format("{}\n", format),
 			// fmt::make_format_args<Args...>(args...)
 			fmt::make_format_args(args...)
 		);
+	}
+
+	template <typename>
+	static constexpr void println(const std::string& format = ""){
+		println(format);
 	}
 
 }

@@ -61,10 +61,10 @@ namespace gdpm::package_manager{
 	GDPM_DLL_EXPORT int initialize(int argc, char **argv);
 	GDPM_DLL_EXPORT int execute();
 	GDPM_DLL_EXPORT void finalize();
-	GDPM_DLL_EXPORT void install_packages(const std::vector<std::string>& package_titles);
-	GDPM_DLL_EXPORT void remove_packages(const std::vector<std::string>& package_titles);
-	GDPM_DLL_EXPORT void update_packages(const std::vector<std::string>& package_titles);
-	GDPM_DLL_EXPORT void search_for_packages(const std::vector<std::string>& package_titles);
+	GDPM_DLL_EXPORT error install_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
+	GDPM_DLL_EXPORT error remove_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
+	GDPM_DLL_EXPORT error update_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
+	GDPM_DLL_EXPORT error search_for_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
 	GDPM_DLL_EXPORT void list_information(const std::vector<std::string>& opts);
 	GDPM_DLL_EXPORT void clean_temporary(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void link_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
