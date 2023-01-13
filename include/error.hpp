@@ -14,6 +14,7 @@ namespace gdpm{
 
 		int get_code() const { return m_code; }
 		std::string get_message() const { return m_message; }
+		bool has_error() const { return m_code != 0; }
 	
 	private:
 		int m_code;

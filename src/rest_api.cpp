@@ -27,8 +27,8 @@ namespace gdpm::rest_api{
 		return false;
 	}
 
-	rest_api_context make_context(type_e type, int category, support_e support, const std::string& filter, const std::string& user, const std::string& godot_version, int max_results, int page, sort_e sort, bool reverse, int verbose){
-		rest_api_context params{
+	context make_context(type_e type, int category, support_e support, const std::string& filter, const std::string& user, const std::string& godot_version, int max_results, int page, sort_e sort, bool reverse, int verbose){
+		context params{
 			.type = type,
 			.category = category,
 			.support = support,
@@ -91,7 +91,7 @@ namespace gdpm::rest_api{
 		return _s;
 	}
 
-	std::string _prepare_request(const std::string &url, const rest_api_context &c){
+	std::string _prepare_request(const std::string &url, const context &c){
 		std::string request_url{url};
 		request_url += to_string(c.type);
 		request_url += (c.category <= 0) ? "&category=" : "&category="+fmt::to_string(c.category);
@@ -105,7 +105,7 @@ namespace gdpm::rest_api{
 		return request_url;
 	}
 
-	void _print_params(const rest_api_context& params){
+	void _print_params(const context& params){
 		log::println("params: \n"
 			"\ttype: {}\n"
 			"\tcategory: {}\n"
@@ -132,7 +132,7 @@ namespace gdpm::rest_api{
 	}
 
 	rapidjson::Document get_assets_list(const std::string& url, type_e type, int category, support_e support, const std::string& filter,const std::string& user, const std::string& godot_version, int max_results, int page, sort_e sort, bool reverse, int verbose){
-		rest_api_context c{
+		context c{
 			.type 			= type,
 			.category 		= category,
 			.support 		= support,
@@ -148,7 +148,7 @@ namespace gdpm::rest_api{
 		return get_assets_list(url, c);
 	}
 
-	rapidjson::Document get_assets_list(const std::string& url, const rest_api_context& c){
+	rapidjson::Document get_assets_list(const std::string& url, const context& c){
 		std::string request_url = _prepare_request(url, c);
 		http::response r = http::request_get(request_url);
 		if(c.verbose > 0)
@@ -156,7 +156,7 @@ namespace gdpm::rest_api{
 		return _parse_json(r.body, c.verbose);
 	}
 
-	rapidjson::Document get_asset(const std::string& url, int asset_id, const rest_api_context& params){
+	rapidjson::Document get_asset(const std::string& url, int asset_id, const context& params){
 		std::string request_url = _prepare_request(url, params);
 		utils::replace_all(request_url, "{id}", std::to_string(asset_id));
 		http::response r = http::request_get(request_url.c_str());

@@ -65,4 +65,4 @@ exe = executable(
 	link_with: lib,
 	cpp_args: cpp_args
 )
-test('unittests', exe)
+test('gdpm-tests', exe)

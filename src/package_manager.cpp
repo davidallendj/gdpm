@@ -34,7 +34,7 @@ namespace gdpm::package_manager{
 	CURL *curl;
 	CURLcode res;
 	config::context config;
-	rest_api::rest_api_context params;
+	rest_api::context params;
 	command_e command;
 	std::vector<std::string> packages;
 	std::vector<std::string> opts;
@@ -102,7 +102,6 @@ namespace gdpm::package_manager{
 		if(config.enable_sync){
 			if(p_cache.empty()){
 				p_cache = synchronize_database(package_titles);
-				p_cache = cache::get_package_info_by_title(package_titles);
 			}
 		}
 

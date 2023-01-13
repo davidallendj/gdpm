@@ -17,31 +17,50 @@ TEST_SUITE("Test database functions"){
 
 
 TEST_SUITE("Package manager function"){
+	using namespace gdpm;
+
 	std::vector<std::string> packages{"ResolutionManagerPlugin","godot-hmac", "Godot"};
-	gdpm::config::context config = gdpm::config::make_context();
+	config::context config = config::make_context();
+
+	auto check_error = [](const error& error){
+		if(error.has_error()){
+			log::error(error.get_message());
+		}
+
+		CHECK(!error.has_error());
+	};
+
 
 	TEST_CASE("Test install packages"){
-		gdpm::package_manager::install_packages(packages, true);
+		error error = package_manager::install_packages(packages, true);
+		check_error(error);
 	}
 
 
 	TEST_CASE("Test searching packages"){
-		gdpm::package_manager::search_for_packages(packages, true);
+		error error = package_manager::search_for_packages(packages, true);
+		check_error(error);
 	}
 
 
 	TEST_CASE("Test remove packages"){
-		gdpm::package_manager::remove_packages(packages, true);
+		error error = package_manager::remove_packages(packages, true);
+		check_error(error);
 	}
 
 }
 
 
 TEST_CASE("Test configuration functions"){
-	gdpm::config::context config = gdpm::config::make_context();
-	config.path = gdpm::constants::TestPath + "/";
+	using namespace gdpm;
 
-	std::string json = gdpm::config::to_json(config);
-	gdpm::error error_save = gdpm::config::save(config.path, config);
-	gdpm::error error_load = gdpm::config::load(config.path, config);
+	config::context config = config::make_context();
+	config.path = constants::TestPath + "/";
+
+	std::string json = config::to_json(config);
+	error error_save = config::save(config.path, config);
+	CHECK(error_save.get_code() == 0);
+
+	error error_load = config::load(config.path, config);
+	CHECK(error_load.get_code() == 0);
 }

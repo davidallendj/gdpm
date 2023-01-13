@@ -1,11 +1,45 @@
 name: github-ci
 
-on: [push]
+on: 
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+
+permissions:
+  contents: read
+  # Needed for the 'trilom/file-changes-action' action
+  pull-requests: read
+
+
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
 
 
 jobs:
   build:
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup
+      run:
+        echo "Setting up dependencies..."
+    
+    - name: Build
+      run:
+        echo -e "Building executable and libraries...\n$PWD"
+        bin/compile.sh
+    
+    - name: Tests
+      run: 
+        echo "Running unit tests..."
+        bin/gdpm-tests
+      
+    - name: Package
+      run: 
+        echo "Packaging binaries..."
 
-
-  steps:
-  - uses: actions/checkout@v1

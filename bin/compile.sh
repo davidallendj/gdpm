@@ -8,8 +8,9 @@
 
 # CMake/ninja build system
 mkdir -p build
-cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -G Ninja
+CXX="zig c++ -target aarch64-linux-gnu" cmake -B build -S . -D CMAKE_EXPORT_COMPILE_COMMANDS=1 -D CMAKE_BUILD_TYPE=Debug -G Ninja
 ninja -C build -j $(nproc)
+
 
 # Create symlinks to executables in build folder if necessary
 if test -f "../build/gdpm"; then

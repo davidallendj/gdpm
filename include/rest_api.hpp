@@ -17,7 +17,7 @@ namespace gdpm::rest_api{
 		constexpr const char *GET_Asset				= "/asset?";
 		constexpr const char *GET_AssetId			= "/asset/{id}"; // ...find_replace
 		constexpr const char *POST_AssetIdDelete	= "/asset/{id}/delete";
-		constexpr const char *POST_AssetIdUndelete	= "/asset/{id}/delete";
+		constexpr const char *POST_AssetIdUndelete	= "/asset/{id}/undelete";
 		constexpr const char *POST_AssetSupportLevel = "/asset/{id}/support_level";
 		constexpr const char *POST_Asset			= "/asset";
 		constexpr const char *POST_AssetId			= "/asset/{id}";
@@ -33,7 +33,7 @@ namespace gdpm::rest_api{
 	enum support_e	{ all, official, community, testing };
 	enum sort_e		{ none, rating, cost, name, updated };
 
-	struct rest_api_context{
+	struct context{
 		type_e type;
 		int category;
 		support_e support;
@@ -47,14 +47,14 @@ namespace gdpm::rest_api{
 		int verbose;
 	};
 
-	rest_api_context make_context(type_e type = GDPM_DEFAULT_ASSET_TYPE, int category = GDPM_DEFAULT_ASSET_CATEGORY, support_e support = GDPM_DEFAULT_ASSET_SUPPORT, const std::string& filter = GDPM_DEFAULT_ASSET_FILTER, const std::string& user = GDPM_DEFAULT_ASSET_USER, const std::string& godot_version = GDPM_DEFAULT_ASSET_GODOT_VERSION, int max_results = GDPM_DEFAULT_ASSET_MAX_RESULTS, int page = GDPM_DEFAULT_ASSET_PAGE, sort_e sort = GDPM_DEFAULT_ASSET_SORT, bool reverse = GDPM_DEFAULT_ASSET_REVERSE, int verbose = GDPM_DEFAULT_ASSET_VERBOSE);
+	context make_context(type_e type = GDPM_DEFAULT_ASSET_TYPE, int category = GDPM_DEFAULT_ASSET_CATEGORY, support_e support = GDPM_DEFAULT_ASSET_SUPPORT, const std::string& filter = GDPM_DEFAULT_ASSET_FILTER, const std::string& user = GDPM_DEFAULT_ASSET_USER, const std::string& godot_version = GDPM_DEFAULT_ASSET_GODOT_VERSION, int max_results = GDPM_DEFAULT_ASSET_MAX_RESULTS, int page = GDPM_DEFAULT_ASSET_PAGE, sort_e sort = GDPM_DEFAULT_ASSET_SORT, bool reverse = GDPM_DEFAULT_ASSET_REVERSE, int verbose = GDPM_DEFAULT_ASSET_VERBOSE);
 
 	std::string to_string(type_e type);
 	std::string to_string(support_e support);
 	std::string to_string(sort_e sort);
-	void _print_params(const rest_api_context& params);
+	void _print_params(const context& params);
 	rapidjson::Document _parse_json(const std::string& r, int verbose = 0);
-	std::string _prepare_request(const std::string& url, const rest_api_context& context);
+	std::string _prepare_request(const std::string& url, const context& context);
 
 	bool register_account(const std::string& username, const std::string& password, const std::string& email);
 	bool login(const std::string& username, const std::string& password);
@@ -62,8 +62,8 @@ namespace gdpm::rest_api{
 
 	rapidjson::Document configure(const std::string& url = constants::HostUrl, type_e type = any, int verbose = 0);
 	rapidjson::Document get_assets_list(const std::string& url = constants::HostUrl, type_e type = GDPM_DEFAULT_ASSET_TYPE, int category = GDPM_DEFAULT_ASSET_CATEGORY, support_e support = GDPM_DEFAULT_ASSET_SUPPORT, const std::string& filter = GDPM_DEFAULT_ASSET_FILTER, const std::string& user = GDPM_DEFAULT_ASSET_USER, const std::string& godot_version = GDPM_DEFAULT_ASSET_GODOT_VERSION, int max_results = GDPM_DEFAULT_ASSET_MAX_RESULTS, int page = GDPM_DEFAULT_ASSET_PAGE, sort_e sort = GDPM_DEFAULT_ASSET_SORT, bool reverse = GDPM_DEFAULT_ASSET_REVERSE, int verbose = GDPM_DEFAULT_ASSET_VERBOSE);
-	rapidjson::Document get_assets_list(const std::string& url, const rest_api_context& params = {});
-	rapidjson::Document get_asset(const std::string& url, int asset_id, const rest_api_context& params = {});
+	rapidjson::Document get_assets_list(const std::string& url, const context& params = {});
+	rapidjson::Document get_asset(const std::string& url, int asset_id, const context& params = {});
 	bool delete_asset(int asset_id);				// ...for moderators
 	bool undelete_asset(int asset_id);				// ...for moderators
 	bool set_support_level(int asset_id);			// ...for moderators
