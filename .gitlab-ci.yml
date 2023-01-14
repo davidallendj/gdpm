@@ -10,12 +10,11 @@ stages:
 
 cache:
   paths:
-    - tests
+    - build
 
 
 before-script:
   - echo "Setting up dependencies..."
-  - git clone $
 
 
 build-job:

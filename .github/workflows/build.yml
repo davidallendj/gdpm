@@ -1,4 +1,4 @@
-name: github-ci
+name: CMake Linux Build
 
 on: 
   workflow_dispatch:
@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  # Needed for the 'trilom/file-changes-action' action
   pull-requests: read
 
 
@@ -21,6 +20,7 @@ concurrency:
 
 jobs:
   build:
+    runs-on: [self-hosted, linux]
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -32,12 +32,15 @@ jobs:
     - name: Build
       run:
         echo -e "Building executable and libraries...\n$PWD"
-        bin/compile.sh
-    
+        ./bin/compile.sh
+  
+  test:
+    runs-on: [self-hosted, linux]
     - name: Tests
+      uses: actions/checkout@v3
       run: 
         echo "Running unit tests..."
-        bin/gdpm-tests
+        ./bin/gdpm-tests
       
     - name: Package
       run: 
