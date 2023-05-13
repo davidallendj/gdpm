@@ -34,10 +34,7 @@ jobs:
         echo -e "Building executable and libraries...\n$PWD"
         ./bin/compile.sh
   
-  test:
-    runs-on: [self-hosted, linux]
-    steps:
-    - name: Tests
+    - name: Test
       run: 
         echo "Running unit tests..."
         ./bin/gdpm-tests

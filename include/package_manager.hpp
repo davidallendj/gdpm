@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.hpp"
+#include "package_manager.hpp"
 #include <cstdio>
 #include <cxxopts.hpp>
 #include <memory>
@@ -47,13 +48,13 @@ namespace gdpm::package_manager{
 		remove, 
 		update, 
 		search, 
+		p_export, /* reserved keyword */
 		list, 
 		link,
 		clone,
 		clean,
 		sync,
-		add_remote,
-		delete_remote, 
+		remote,
 		help, 
 		none 
 	};
@@ -61,25 +62,35 @@ namespace gdpm::package_manager{
 	GDPM_DLL_EXPORT int initialize(int argc, char **argv);
 	GDPM_DLL_EXPORT int execute();
 	GDPM_DLL_EXPORT void finalize();
+
+	/* Package management API */
 	GDPM_DLL_EXPORT error install_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
 	GDPM_DLL_EXPORT error remove_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
+	GDPM_DLL_EXPORT error remove_all_packages();
 	GDPM_DLL_EXPORT error update_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
 	GDPM_DLL_EXPORT error search_for_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
-	GDPM_DLL_EXPORT void list_information(const std::vector<std::string>& opts);
+	GDPM_DLL_EXPORT error export_packages(const std::string& path);
+	GDPM_DLL_EXPORT std::vector<std::string> list_information(const std::vector<std::string>& opts, bool print_list = true);
 	GDPM_DLL_EXPORT void clean_temporary(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void link_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
 	GDPM_DLL_EXPORT void clone_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
-	GDPM_DLL_EXPORT void add_remote_repository(const std::string& repository, ssize_t offset = -1);
-	GDPM_DLL_EXPORT void delete_remote_repository(const std::string& repository);
-	GDPM_DLL_EXPORT void delete_remote_repository(ssize_t index);
+	
+	/* Remote API */
+	GDPM_DLL_EXPORT void _handle_remote(const std::string& repository);
+	GDPM_DLL_EXPORT void remote_add_repository(const std::string& repository, ssize_t offset = -1);
+	GDPM_DLL_EXPORT void remote_remove_respository(const std::string& repository);
+	GDPM_DLL_EXPORT void remote_remove_respository(ssize_t index);
 
-	GDPM_DLL_EXPORT cxxargs parse_arguments(int argc, char **argv);
-	GDPM_DLL_EXPORT void handle_arguments(const cxxargs& args);
+	/* Auxiliary Functions */
+	GDPM_DLL_EXPORT cxxargs _parse_arguments(int argc, char **argv);
+	GDPM_DLL_EXPORT void _handle_arguments(const cxxargs& args);
 	GDPM_DLL_EXPORT void run_command(command_e command, const std::vector<std::string>& package_titles, const std::vector<std::string>& opts);
 	GDPM_DLL_EXPORT void print_package_list(const rapidjson::Document& json);
 	GDPM_DLL_EXPORT void print_package_list(const std::vector<package_info>& packages);
 	GDPM_DLL_EXPORT void print_remote_sources();
+	GDPM_DLL_EXPORT std::vector<std::string> get_package_titles(const std::vector<package_info>& packages);
 
+	/* Dependency Management API */
 	GDPM_DLL_EXPORT std::vector<package_info> synchronize_database(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT std::vector<std::string> resolve_dependencies(const std::vector<std::string>& package_titles);
 }

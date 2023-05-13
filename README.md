@@ -1,10 +1,12 @@
 # Godot Package Manager (GDPM)
 
-GDPM is an attempt to make a front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different systems. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. GDPM has not been tested to work on Windows or Mac.
+GDPM is an attempt to make a simple, front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different platforms. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. It stores "packages" in a global directories and is capable of linking or copying global packages to local projects.&#x20;
+
+\*GDPM has not been tested for Windows or Mac.
 
 ## Why not just use the Asset Library?
 
-The AssetLib actually works well enough for most use cases. However, it's common to download the same asset multiple times for different projects. If there isn't a need to modify the asset itself, it makes more sense to download the asset only once. That way, there will only be one copy of the asset and it can be linked to all new projects. The AssetLib does not have a way to manage assets like this, and therefore requires redownload assets for each new project. Additionally, the AssetLib is integrated into the engine itself with no command-line interface. When downloading multiple assets, it is much more convenient to be able to automate the downloads using a list from a text file. If the user knows, which assets to download, they can make a list and point to it.
+The AssetLib actually works well enough for most use cases. However, it's fairly common to download the same asset multiple times for different projects. If there isn't a need to modify the asset itself, it makes more sense to download the asset *once and only once*. That way, there will only be one global, read-only copy of the asset that is accessable and it can be linked to more than one project. The AssetLib does not have a built-in way to manage assets like this, and therefore requires redownloading assets for each new project. Additionally, the AssetLib is integrated into the engine itself with no command-line interface to manage assets. When downloading multiple assets, it is much more convenient to be able to automate the downloads using a list from a text file. If the user knows, which assets to download, they can make a list and point to it.
 
 Some assets are more common such as the "First Person Controller" are likely to be reused with little to no modification. Therefore, it made sense to provide some method to download and install the assets once and then provide a symbolic link back to the stored packages. GDPM attempts to fix this by storing the assets in a single location and creating symlinks/shortcuts to each project. By having a separate, simple binary executable, the package manager can be used in shell scripts to download assets more quickly.
 
@@ -16,17 +18,17 @@ GDPM is built to work with an instance of [Godot's Asset API](https://github.com
 
 When removing a package, the unzip files are remove but the temporary files are keep in the specified `.tmp` directory unless using the `--clean` option. This allows the user to remove the uncompressed files, but easily reinstall the package without having to download it remotely again.
 
-The local database stores all the information sent by the Asset API with additional information like "install_path" and "remote_source" for the API used to gather information. 
+The local database stores all the information sent by the Asset API with additional information like "install\_path" and "remote\_source" for the API used to gather information.
 
 ## Features
 
-- Download and install packages from Godot's official AssetLib or from custom repositories. (Note: Multithread download support planned.)
+*   Download and install packages from Godot's official AssetLib or from custom repositories. (Note: Multithread download support planned.)
 
-- Stores downloads in single location to use across multiple Godot projects.
+*   Stores downloads in single location to use across multiple Godot projects.
 
-- Copy packages into a Godot project to make modifications when needed.
+*   Copy packages into a Godot project to make modifications when needed.
 
-- Create package groups to copy a set of packages into a Godot project.
+*   Create package groups to copy a set of packages into a Godot project.
 
 ## Building from Source
 
@@ -34,30 +36,31 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 ### Prerequisites
 
-- Meson or CMake (version 3.12 or later)
+*   Meson or CMake (version 3.12 or later)
 
-- C++20 compiler (GCC/Clang/MSVC??)
+*   C++20 compiler (GCC/Clang/MSVC??)
 
-- libcurl (or curlpp)
+*   libcurl (or curlpp)
 
-- libzip
+*   libzip
 
-- RapidJson
+*   RapidJson
 
-- fmt (may be removed later in favor of C++20 std::format)
+*   fmt (may be removed later in favor of C++20 std::format)
 
-- Catch2 (optional for tests, but still WIP)
+*   Catch2 (optional for tests, but still WIP)
 
-- cxxopts (header only)
+*   cxxopts (header only)
 
-- SQLite 3
+*   SQLite 3
 
 After installing all necessary dependencies, run the following commands:
 
 ```bash
 # Start by cloning the repo, then...
 git clone https://github.com/davidallendj/gdpm
-cd https://github.com/davidallendj/gdpm
+cd gdpm
+export project_root=${pwd}
 
 # ...if using Meson with Clang on Linux...
 meson build
@@ -69,6 +72,9 @@ CXX=clang++ meson compile -C build -j$(npoc)
 cd build
 cmake .. 
 make -j$(nproc)
+
+# Easy build using predefined `compile` script
+${project_root}/bin/compile.sh
 
 # ...build using MinGW on Windows ???
 # ...build using MSVC on Windows ??? 
@@ -107,13 +113,13 @@ endif()
 
 ### Macro Definitions
 
-| Macro                 | Values                                                       | Description                                                                                                                                     |
-| --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| GDPM_LOG_LEVEL        | 0-5                                                          | Sets the logging level to show when the program runs. Setting GDPM_LOG_LEVEL=0 will completely disable logging information being displayed.     |
-| GDPM_REQUEST_DELAY    | 200 ms                                                       | Sets the delay time (in ms) between each API request. The delay is meant to reduce the load on the API.                                         |
-| GDPM_ENABLE_COLOR     | 0 or 1 (true/false)                                          | Enable/disable color output to stdout for errors and debugging. Disable if your system or console does not support ANSI colors. (default: true) |
-| GDPM_ENABLE_TIMESTAMP | 0 or 1 (true/false)                                          | Enable/disable timestamp output to stdout. (default: true)                                                                                      |
-| GDPM_TIMESTAMP_FORMAT | strftime formated string (default: ":%I:%M:%S %p; %Y-%m-%d") | Set the time format to use in logging via strftime(). Uses ISO 8601 date and time standard as default.                                          |
+| Macro                   | Values                                                       | Description                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| GDPM\_LOG\_LEVEL        | 0-5                                                          | Sets the logging level to show when the program runs. Setting GDPM\_LOG\_LEVEL=0 will completely disable logging information being displayed.   |
+| GDPM\_REQUEST\_DELAY    | 200 ms                                                       | Sets the delay time (in ms) between each API request. The delay is meant to reduce the load on the API.                                         |
+| GDPM\_ENABLE\_COLOR     | 0 or 1 (true/false)                                          | Enable/disable color output to stdout for errors and debugging. Disable if your system or console does not support ANSI colors. (default: true) |
+| GDPM\_ENABLE\_TIMESTAMP | 0 or 1 (true/false)                                          | Enable/disable timestamp output to stdout. (default: true)                                                                                      |
+| GDPM\_TIMESTAMP\_FORMAT | strftime formated string (default: ":%I:%M:%S %p; %Y-%m-%d") | Set the time format to use in logging via strftime(). Uses ISO 8601 date and time standard as default.                                          |
 
 ## Usage Examples
 
@@ -167,7 +173,7 @@ gdpm link -f packages.txt --path tests/test-godot-project
 gdpm clone -f packages.txt --path tests/tests-godot-project/addons
 ```
 
-Temporary files downloaded from remote repositories can be cleaned by using the clean command or the '--clean' flag after installing  or removing packages. This is recommended if space is limited, but also reduces the number of remote requests needed to rebuild the local package database. 
+Temporary files downloaded from remote repositories can be cleaned by using the clean command or the '--clean' flag after installing  or removing packages. This is recommended if space is limited, but also reduces the number of remote requests needed to rebuild the local package database.
 
 ```bash
 gdpm install -f packages.txt --clean -y
@@ -212,21 +218,21 @@ export PATH=$PATH:path/to/bin/gdpm
 
 ## Planned Features
 
-- [ ] Dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
+*   [ ] Dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
 
-- [ ] Proper updating mechanism. 
+*   [ ] Proper updating mechanism.
 
-- [ ] Plugin integration into the editor.
+*   [ ] Plugin integration into the editor.
 
-- [ ] Complete integration with the Asset API including moderation tools.
+*   [ ] Complete integration with the Asset API including moderation tools.
 
-- [ ] Login and register for access to repositories.
+*   [ ] Login and register for access to repositories.
 
-- [ ] Support for paid assets. 
+*   [ ] Support for paid assets.
 
 ## Known Issues
 
-- The `help` command does not should the command/options correctly. Commands do not use the double hypen, `--command` format. Commands should be use like `gdpm command --option` instead.
+*   The `help` command does not should the command/options correctly. Commands do not use the double hypen, `--command` format. Commands should be use like `gdpm command --option` instead.
 
 ## License
 
