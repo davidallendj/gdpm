@@ -2,6 +2,7 @@ build/**
 builds/**
 bin/gdpm
 bin/gdpm-tests
+docs/doxygen
 cache/**
 tests/*
 !tests/*.cpp

@@ -1,6 +1,6 @@
 # Godot Package Manager (GDPM)
 
-GDPM is an attempt to make a simple, front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different platforms. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. It stores "packages" in a global directories and is capable of linking or copying global packages to local projects.&#x20;
+GDPM is an attempt to make a simple, front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different platforms. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. It stores "packages" in a global directories and is capable of linking or copying global packages to local projects.
 
 \*GDPM has not been tested for Windows or Mac.
 
@@ -121,6 +121,12 @@ endif()
 | GDPM\_ENABLE\_TIMESTAMP | 0 or 1 (true/false)                                          | Enable/disable timestamp output to stdout. (default: true)                                                                                      |
 | GDPM\_TIMESTAMP\_FORMAT | strftime formated string (default: ":%I:%M:%S %p; %Y-%m-%d") | Set the time format to use in logging via strftime(). Uses ISO 8601 date and time standard as default.                                          |
 
+### API Documentation
+
+There is now support for generating API documentation with `doxygen` for the project. Simply run the command in the root directory of the project and documentation will be generated in the `docs/doxygen/` directory. View it by opening the `html/index.html` file in a browser. 
+
+NOTE: The API documentation is still a work-in-progress. Over time, the code base will be updated to generate the important parts of the source code.
+
 ## Usage Examples
 
 GDPM takes a single command such as install, remove, search, or list followed by a list of package names as the following argument. The command specified is ran then the program exits reporting an errors that may occur. Each command can be modified by specifying additional optional parameters such as '--file' to specify a file to use or '--max-results' to set the number of max results to return from a search.
@@ -135,11 +141,14 @@ To see more help information:
 gdpm help
 ```
 
-Packages can be installed using the `install` command and providing a list of comma-delimited package names with no spaces or by providing a one-package-per-line file using the `--file` option. Using the `-y` option will bypass the user prompt. The `--no-sync` option with bypass syncing the local package database with the AssetLib API and use locally stored information only. See the `search` command to find a list of available packages.
+Packages can be installed using the `install` command and providing a list of comma-delimited package names with no spaces or by providing a one-package-per-line file using the `--file` option. Additionally, a package list can be exported to reinstall packages using the `install` command. Using the `-y` option will bypass the user prompt. The `--no-sync` option with bypass syncing the local package database with the AssetLib API and use locally stored information only. See the `search` command to find a list of available packages.
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
 gdpm install -f packages.txt --config config.json --no-sync --no-prompt
+
+gdpm export path/to/packages.txt
+gdpm install -f path/to/packages.txt --no-sync --no-prompt
 ```
 
 Packages can be removed similiarly to installing.
@@ -182,11 +191,13 @@ gdpm clean "GodotNetworking"
 gdpm clean
 ```
 
-Planned: Add a custom remote AssetLib repository using [this](https://github.com/godotengine/godot-asset-library) API. You can set the priority for each remote repo with the '--set-priority' option or through the 'config.json' file.
+Planned: Add a custom remote AssetLib repository using [this](https://github.com/godotengine/godot-asset-library) API.&#x20;
+
+Remote repositories can be added and removed similar to Git. Be aware that this API is still in the process of being changed and may not always work as expected.
 
 ```bash
-gdpm add-remote https://custom-assetlib/asset-library/api --set-priority 0
-gdpm delete-remote https://custom-assetlib/asset-library/api
+gdpm remote add godot-official https://custom-assetlib/asset-library/api --set-priority 0
+gdpm remote remove https://custom-assetlib/asset-library/api
 ```
 
 Search for available packages from all added repositories. The results can be tweaked using a variety of options like '--sort' or '--support'. See the '--help' command for more details.

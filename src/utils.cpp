@@ -18,8 +18,8 @@
 #include <zip.h>
 
 namespace gdpm::utils{
-	
 
+	
 	#if (GDPM_READFILE_IMPL == 0)
 		std::string readfile(const std::string& path){
 			constexpr auto read_size = std::size_t{4096};
@@ -179,4 +179,4 @@ namespace gdpm::utils{
 		sleep_for(millis);
 		// sleep_until(system_clock::now() + millis);
 	}
-} // namespace towk::utils
+} // namespace gdpm::utils

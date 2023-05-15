@@ -8,7 +8,7 @@
 #include <doctest.h>
 
 
-TEST_SUITE("Test database functions"){
+TEST_SUITE("Cache functions"){
 
 	TEST_CASE("Test cache database functions"){
 		gdpm::cache::create_package_database();
@@ -16,11 +16,12 @@ TEST_SUITE("Test database functions"){
 }
 
 
-TEST_SUITE("Package manager function"){
+TEST_SUITE("Command functions"){
 	using namespace gdpm;
+	using namespace gdpm::package_manager;
 
-	std::vector<std::string> packages{"ResolutionManagerPlugin","godot-hmac", "Godot"};
 	config::context config = config::make_context();
+	std::vector<std::string> packages{"ResolutionManagerPlugin","godot-hmac", "Godot"};
 
 	auto check_error = [](const error& error){
 		if(error.has_error()){
@@ -32,20 +33,21 @@ TEST_SUITE("Package manager function"){
 
 
 	TEST_CASE("Test install packages"){
-		error error = package_manager::install_packages(packages, true);
-		check_error(error);
+		check_error(install_packages(packages, true));
 	}
 
 
 	TEST_CASE("Test searching packages"){
-		error error = package_manager::search_for_packages(packages, true);
-		check_error(error);
+		check_error(search_for_packages(packages, true));
 	}
 
 
 	TEST_CASE("Test remove packages"){
-		error error = package_manager::remove_packages(packages, true);
-		check_error(error);
+		check_error(remove_packages(packages, true));
+	}
+
+	TEST_CASE("Test exporting installed package list"){
+		check_error(export_packages({"tests/gdpm/.tmp/packages.txt"}));
 	}
 
 }

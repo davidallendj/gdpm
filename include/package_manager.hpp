@@ -6,6 +6,7 @@
 #include <cxxopts.hpp>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <rapidjson/document.h>
@@ -15,7 +16,7 @@ namespace gdpm::package_manager{
 	extern std::vector<std::string> repo_sources;
 	extern CURL *curl;
 	extern CURLcode res;
-	extern config::context config;
+	extern config::context config;	
 
 	struct package_info{
 		size_t asset_id;
@@ -59,6 +60,12 @@ namespace gdpm::package_manager{
 		none 
 	};
 
+	using package_list 		= std::vector<package_info>;
+	using package_titles 	= std::vector<std::string>;
+	using cl_arg 			= std::variant<int, bool, float, std::string>;
+	using cl_args			= std::vector<cl_arg>;
+	using cl_opts			= std::unordered_map<std::string, cl_args>;
+
 	GDPM_DLL_EXPORT int initialize(int argc, char **argv);
 	GDPM_DLL_EXPORT int execute();
 	GDPM_DLL_EXPORT void finalize();
@@ -69,17 +76,18 @@ namespace gdpm::package_manager{
 	GDPM_DLL_EXPORT error remove_all_packages();
 	GDPM_DLL_EXPORT error update_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
 	GDPM_DLL_EXPORT error search_for_packages(const std::vector<std::string>& package_titles, bool skip_prompt = false);
-	GDPM_DLL_EXPORT error export_packages(const std::string& path);
+	GDPM_DLL_EXPORT error export_packages(const std::vector<std::string>& paths);
 	GDPM_DLL_EXPORT std::vector<std::string> list_information(const std::vector<std::string>& opts, bool print_list = true);
 	GDPM_DLL_EXPORT void clean_temporary(const std::vector<std::string>& package_titles);
 	GDPM_DLL_EXPORT void link_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
 	GDPM_DLL_EXPORT void clone_packages(const std::vector<std::string>& package_titles, const std::vector<std::string>& paths);
 	
 	/* Remote API */
-	GDPM_DLL_EXPORT void _handle_remote(const std::string& repository);
-	GDPM_DLL_EXPORT void remote_add_repository(const std::string& repository, ssize_t offset = -1);
-	GDPM_DLL_EXPORT void remote_remove_respository(const std::string& repository);
+	GDPM_DLL_EXPORT error _handle_remote(const std::vector<std::string>& args, const std::vector<std::string>& opts);
+	GDPM_DLL_EXPORT void remote_add_repository(const std::vector<std::string>& repositories);
+	GDPM_DLL_EXPORT void remote_remove_respository(const std::vector<std::string>& repositories);
 	GDPM_DLL_EXPORT void remote_remove_respository(ssize_t index);
+	GDPM_DLL_EXPORT void remote_move_repository(int old_position, int new_position);
 
 	/* Auxiliary Functions */
 	GDPM_DLL_EXPORT cxxargs _parse_arguments(int argc, char **argv);

@@ -1,12 +1,15 @@
 
+#include <fmt/core.h>
 #include <string>
 #include "log.hpp"
 
 namespace gdpm::error_codes{
 	enum {
-		UNKNOWN		= 0,
-		NOT_FOUND	= 1,
-
+		NONE				= 0,
+		UNKNOWN				= 1,
+		NOT_FOUND			= 2,
+		FILE_EXISTS 		= 3,
+		HOST_UNREACHABLE 	= 4,
 	};
 
 	inline std::string to_string(int error_code) {
@@ -15,7 +18,7 @@ namespace gdpm::error_codes{
 }; 
 
 namespace gdpm{
-	class error{
+	class error {
 	public:
 		error(int code = 0, const std::string& message = "", bool print_message = false):
 			m_code(code), m_message(message)
@@ -36,4 +39,17 @@ namespace gdpm{
 		int m_code;
 		std::string m_message;
 	};
+
+	// Add logging function that can handle error objects
+	namespace log {
+		template <typename S, typename...Args>
+		static constexpr void error(const gdpm::error& e){
+#if GDPM_LOG_LEVEL > 1
+			vlog(
+				fmt::format(GDPM_COLOR_LOG_ERROR "[ERROR {}" GDPM_COLOR_LOG_RESET, e.get_message()),
+				fmt::make_format_args("" /*e.get_message()*/)
+			);
+#endif
+		}
+	}
 }

@@ -87,8 +87,6 @@ namespace gdpm::package_manager{
 	error install_packages(const std::vector<std::string>& package_titles, bool skip_prompt){
 		using namespace rapidjson;
 		params.verbose = config.verbose;
-		error error;
-		
 
 		/* TODO: Need a way to use remote sources from config until none left */
 
@@ -115,11 +113,9 @@ namespace gdpm::package_manager{
 
 		/* Found nothing to install so there's nothing to do at this point. */
 		if(p_found.empty()){
-			const char *message = "No packages found to install.";
+			constexpr const char *message = "No packages found to install.";
 			log::error(message);
-			error.set_code(-1);
-			error.set_message(message);
-			return error;
+			return error(error_codes::NOT_FOUND, message);
 		}
 		
 		log::println("Packages to install: ");
@@ -131,7 +127,7 @@ namespace gdpm::package_manager{
 		
 		if(!skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to install these packages? (y/n)"))
-				return error;
+				return error();
 		}
 
 		using ss_pair = std::pair<std::string, std::string>;
@@ -158,10 +154,9 @@ namespace gdpm::package_manager{
 							params.verbose = config.verbose;
 							doc = rest_api::get_asset(url, p.asset_id, params);
 							if(doc.HasParseError() || doc.IsNull()){
-								log::println("");
-								log::error("Error parsing HTTP response. (error code: {})", doc.GetParseError());
-								error.set_code(doc.GetParseError());
-								return error;
+								constexpr const char *message = "\nError parsing HTTP response.";
+								log::error(message);
+								return error(doc.GetParseError(), message);
 							}
 							p.category			= doc["category"].GetString();
 							p.description 		= doc["description"].GetString();
@@ -221,10 +216,9 @@ namespace gdpm::package_manager{
 							if(response.code == 200){
 								log::println("Done.");
 							}else{
-								log::error("Something went wrong...(code {})", response.code);
-								error.set_code(response.code);
-								error.set_message("Error in HTTP response.");
-								return error;
+								constexpr const char *message = "Error in HTTP response.";
+								log::error(message);
+								return error(response.code, message);
 							}
 						}
 
@@ -246,7 +240,7 @@ namespace gdpm::package_manager{
 			// );
 		}
 
-		return error;
+		return error();
 	}
 
 
@@ -336,14 +330,12 @@ namespace gdpm::package_manager{
 		/* Get the list of all packages to remove then remove */
 		std::vector<package_info> p_installed = cache::get_installed_packages();
 		std::vector<std::string> p_titles = get_package_titles(p_installed);
-		error error = remove_packages(p_titles);
-		return error;
+		return remove_packages(p_titles);
 	}
 
 
 	error update_packages(const std::vector<std::string>& package_titles, bool skip_prompt){
 		using namespace rapidjson;
-		error error;
 
 		/* If no package titles provided, update everything and then exit */
 		if(package_titles.empty()){
@@ -351,13 +343,11 @@ namespace gdpm::package_manager{
 			url += rest_api::endpoints::GET_AssetId;
 			Document doc = rest_api::get_assets_list(url, params);
 			if(doc.IsNull()){
-				std::string message("Could not get response from server. Aborting.");
+				constexpr const char *message = "Could not get response from server. Aborting.";
 				log::error(message);
-				error.set_code(-1);
-				error.set_message(message);
-				return error;
+				return error(error_codes::HOST_UNREACHABLE, message);
 			}
-			return error;
+			return error();
 		}
 
 		/* Fetch remote asset data and compare to see if there are package updates */
@@ -382,22 +372,21 @@ namespace gdpm::package_manager{
 
 		if(!skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to update the following packages? (y/n)"))
-				return error;
+				return error();
 		}
 
 		remove_packages(p_updates);
 		install_packages(p_updates);
-		return error;
+		return error();
 	}
 
 
 	error search_for_packages(const std::vector<std::string> &package_titles, bool skip_prompt){
 		std::vector<package_info> p_cache = cache::get_package_info_by_title(package_titles);
-		error error;
 		
 		if(!p_cache.empty() && !config.enable_sync){
 			print_package_list(p_cache);
-			return error;
+			return error();
 		}
 		for(const auto& p_title : package_titles){
 			using namespace rapidjson;
@@ -411,39 +400,45 @@ namespace gdpm::package_manager{
 			request_url += rest_api::endpoints::GET_Asset;
 			Document doc = rest_api::get_assets_list(request_url, params);
 			if(doc.IsNull()){
-				std::string message("Could not search for packages.");
+				constexpr const char *message = "Could not fetch metadata.";
 				log::error(message);
-				error.set_code(-1);
-				error.set_message(message);
-				return error;
+				return error(error_codes::HOST_UNREACHABLE, message);
 			}
 
 			log::info("{} package(s) found...", doc["total_items"].GetInt());
 			print_package_list(doc);
 		}
-		return error;
+		return error();
 	}
 
 
-	error export_packages(const std::string& path){
-		error error;
-		
+	error export_packages(const std::vector<std::string>& paths){
+
 		/* Get all installed package information for export */
 		std::vector<package_info> p_installed = cache::get_installed_packages();
 		std::vector<std::string> p_titles = get_package_titles(p_installed);
 
 		/* Build string of contents with one package title per line */
-		std::string output;
+		std::string output{};
 		std::for_each(p_titles.begin(), p_titles.end(), [&output](const std::string& p){
 			output += p + "\n";
 		});
 
 		/* Write contents of installed packages in reusable format */
-		std::filesystem::path filepath(path);
-		std::ofstream of(filepath);
-		of << output;
+		for(const auto& path : paths ){
+			std::ofstream of(path);
+			if(std::filesystem::exists(path)){
+				constexpr const char *message = "File or directory exists!";
+				log::error(message);
+				of.close();
+				return error(error_codes::FILE_EXISTS, message);
+			}
+			log::println("writing contents to file");
+			of << output;
+			of.close();
+		}
 
-		return error;
+		return error();
 	}
 
 
@@ -582,26 +577,42 @@ namespace gdpm::package_manager{
 	}
 
 
-	void _handle_remote(const std::string& repository){
-		
+	error _handle_remote(const std::vector<std::string>& args, const std::vector<std::string>&){
+		/* Check if enough arguments are supplied */
+		size_t argc = args.size();
+		if (argc < 0){
+			constexpr const char *message = "No arguments supplied. Aborting.";
+			log::error(message);
+			return error(0, message);
+		}
+
+		/* Check which subcommand is supplied */
+		std::string sub = args.front();
+		std::vector<std::string> argv(args.begin()+1, args.end());
+		if(sub == "add") 			remote_add_repository(argv);
+		else if (sub == "remove") 	remote_remove_respository(argv);
+		else if (sub == "list")		print_remote_sources();
+		else{
+			constexpr const char *message = "Unknown sub-command. Try 'gdpm help remote' for options.";
+			log::error(message);
+			return error(error_codes::UNKNOWN, message);
+		}
+		return error();
 	}
 
 
-	void remote_add_repository(const std::string& repository, ssize_t offset){
-		auto& s = config.remote_sources;
-		// auto iter = (offset > 0) ? s.begin() + offset : s.end() - offset;
-		// config.remote_sources.insert(iter, repository);
-		config.remote_sources.insert(repository);
+	void remote_add_repository(const std::vector<std::string>& repos){
+		std::for_each(repos.begin(), repos.end(), [](const std::string& repo){
+			config.remote_sources.insert(repo);
+		});
 	}
 
 
-	void remote_remove_respository(const std::string& repository){
+	void remote_remove_respository(const std::vector<std::string>& repos){
 		auto& s = config.remote_sources;
-		s.erase(repository);
-		// std::erase(s, repository);
-		// (void)std::remove_if(s.begin(), s.end(), [&repository](const std::string& rs){
-		// 	return repository == rs;
-		// });
+		std::for_each(repos.end(), repos.begin(), [](const std::string& repo){
+			s.erase(repo);
+		});
 	}
 
 
@@ -609,6 +620,11 @@ namespace gdpm::package_manager{
 	void remote_remove_respository(size_t index){
 		auto& s = config.remote_sources;
 		// std::erase(s, index);
+	}
+
+
+	void remote_move_respository(int old_position, int new_position){
+
 	}
 
 
@@ -819,22 +835,22 @@ namespace gdpm::package_manager{
 
 
 	/* Used to run the command AFTER parsing and setting all command line args. */
-	void run_command(command_e c, const std::vector<std::string>& package_titles, const std::vector<std::string>& opts){
+	void run_command(command_e c, const std::vector<std::string>& args, const std::vector<std::string>& opts){
 		switch(c){
-			case install: 	install_packages(package_titles, skip_prompt); 		break;
-			case remove: 	remove_packages(package_titles, skip_prompt); 		break;
-			case update:	update_packages(package_titles, skip_prompt); 		break;
-			case search: 	search_for_packages(package_titles, skip_prompt); 	break;
-			case p_export:	export_packages(opts[0]);						break;
-			case list: 		list_information(package_titles); 			break;
+			case install: 	install_packages(args, skip_prompt); 		break;
+			case remove: 	remove_packages(args, skip_prompt); 		break;
+			case update:	update_packages(args, skip_prompt); 		break;
+			case search: 	search_for_packages(args, skip_prompt); 	break;
+			case p_export:	export_packages(args);								break;
+			case list: 		list_information(args); 								break;
 							/* ...opts are the paths here */
-			case link:		link_packages(package_titles, opts);			break;
-			case clone:		clone_packages(package_titles, opts);		break;
-			case clean:		clean_temporary(package_titles);					break;
-			case sync: 		synchronize_database(package_titles);				break;
-			case remote: 	_handle_remote(opts[0]);					break;
-			case help: 		/* ...runs in handle_arguments() */		break;
-			case none:		/* ...here to run with no command */	break;
+			case link:		link_packages(args, opts);			break;
+			case clone:		clone_packages(args, opts);			break;
+			case clean:		clean_temporary(args);						break;
+			case sync: 		synchronize_database(args);					break;
+			case remote: 	_handle_remote(args, opts);									break;
+			case help: 		/* ...runs in handle_arguments() */							break;
+			case none:		/* ...here to run with no command */						break;
 		}
 	}
 

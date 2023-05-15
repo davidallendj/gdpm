@@ -12,10 +12,30 @@
 #include <fmt/printf.h>
 #include <fmt/format.h>
 
+/*
+TODO: Allow setting the logging *prefix*
+TODO: Write log information to file
+*/
 namespace gdpm::log
 {
 	template <typename...Args> concept RequireMinArgs = requires (std::size_t min){ sizeof...(Args) > min; };
 	
+	enum level{
+		NONE,
+		INFO,
+		WARNING,
+		DEBUG,
+		ERROR
+	};
+
+	struct config {
+		static int level;
+		static std::string prefix;
+		static std::string path;
+		static bool print_to_stdout;
+		static bool print_to_stderr;
+	};
+
 	static void vlog(fmt::string_view format, fmt::format_args args){
 		fmt::vprint(format, args);
 	}
