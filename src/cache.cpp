@@ -2,35 +2,44 @@
 #include "cache.hpp"
 #include "log.hpp"
 #include "constants.hpp"
-#include "package_manager.hpp"
+#include "package.hpp"
 #include "utils.hpp"
+#include "result.hpp"
 #include <filesystem>
 #include <string>
+#include <format>
+#include <tuple>
 
 
 namespace gdpm::cache{
-	int create_package_database(const std::string& cache_path, const std::string& table_name){
+	error create_package_database(bool overwrite, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg;
 
 		/* Check and make sure directory is created before attempting to open */
 		namespace fs = std::filesystem;
-		fs::path dir_path = fs::path(cache_path).parent_path();
+		fs::path dir_path = fs::path(params.cache_path).parent_path();
 		if(!fs::exists(dir_path)){
-			log::info("Creating cache directories...{}", cache_path);
+			log::info("Creating cache directories...{}", params.cache_path);
 			fs::create_directories(dir_path);
 		}
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("create_package_database.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc,
+				std::format(
+					"create_package_database.sqlite3_open(): {}",
+					sqlite3_errmsg(db)
+				)
+			);
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 
-		std::string sql = "CREATE TABLE IF NOT EXISTS " +
-							table_name + "("
+		string sql = "CREATE TABLE IF NOT EXISTS " +
+							params.table_name + "("
 							"id INTEGER PRIMARY KEY AUTOINCREMENT,"
 							"asset_id		INT		NOT NULL,"
 							"type			INT		NOT NULL,"
@@ -54,60 +63,71 @@ namespace gdpm::cache{
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
 			// log::error("Failed to fetch data: {}\n", sqlite3_errmsg(db));
-			log::error("create_package_database.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"create_package_database.sqlite3_exec(): {}", 
+				errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		sqlite3_close(db);
-		return 0;
+		return error();
 	}
 
 
-	int insert_package_info(const std::vector<package_info>& packages, const std::string& cache_path, const std::string& table_name){
+	error insert_package_info(const package::info_list& packages, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
 
 		/* Prepare values to use in sql statement */
-		std::string sql{"BEGIN TRANSACTION; "};
+		string sql{"BEGIN TRANSACTION; "};
 		for(const auto& p : packages){
-			sql += "INSERT INTO " + table_name + " (" GDPM_PACKAGE_CACHE_COLNAMES ") ";
-			sql += "VALUES (" + to_values(p) + "); ";
+			sql += "INSERT INTO " + params.table_name + " (" GDPM_PACKAGE_CACHE_COLNAMES ") ";
+			sql += "VALUES (" + to_values(p).unwrap_unsafe() + "); ";
 		}
 		sql += "COMMIT;";
 		// log::println("{}", sql);
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("insert_package_info.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"insert_package_info.sqlite3_open(): {}", 
+				sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("insert_package_info.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+					"insert_package_info.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		sqlite3_close(db);
-		return 0;
+		return error();
 	}
 
 
-	std::vector<package_info> get_package_info_by_id(const std::vector<size_t>& package_ids, const std::string& cache_path, const std::string& table_name){
+	result_t<package::info_list> get_package_info_by_id(const package::id_list& package_ids, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
 		size_t p_size = 0;
-		std::vector<package_info> p_vector;
-		std::string sql{"BEGIN TRANSACTION;\n"};
+		package::info_list p_vector;
+		string sql{"BEGIN TRANSACTION;\n"};
 
 		auto callback = [](void *data, int argc, char **argv, char **colnames){
 			// log::error("{}", (const char*)data);
 			// p_data *_data = (p_data*)data;
-			std::vector<package_info> *_p_vector = (std::vector<package_info>*) data;
-			package_info p{
+			package::info_list *_p_vector = (package::info_list*) data;
+			package::info p{
 				.asset_id 			= std::stoul(argv[1]),
 				.type 				= argv[2],
 				.title 				= argv[3],
@@ -130,41 +150,47 @@ namespace gdpm::cache{
 			return 0;
 		};
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("get_package_info_by_id.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"get_package_info_by_id.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 		
 		for(const auto& p_id : package_ids){
-			sql += "SELECT * FROM " + table_name + " WHERE asset_id=" + fmt::to_string(p_id)+ ";\n";
+			sql += "SELECT * FROM " + params.table_name + " WHERE asset_id=" + std::to_string(p_id)+ ";\n";
 		}
 		sql += "COMMIT;\n";
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
+			error error(rc, std::format(
+				"get_package_info_by_id.sqlite3_exec(): {}", errmsg
+			));
 			log::error("get_package_info_by_id.sqlite3_exec(): {}", errmsg);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 		sqlite3_close(db);
-		return p_vector;
+		return result_t(p_vector, error());
 	}
 
 
-	std::vector<package_info> get_package_info_by_title(const std::vector<std::string>& package_titles, const std::string& cache_path, const std::string& table_name){
+	result_t<package::info_list> get_package_info_by_title(const package::title_list& package_titles, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
-		std::vector<package_info> p_vector;
+		package::info_list p_vector;
 
 		auto callback = [](void *data, int argc, char **argv, char **colnames){
 			if(argc <= 0)
 				return 1;
-			std::vector<package_info> *_p_vector = (std::vector<package_info>*)data;
+			package::info_list *_p_vector = (package::info_list*)data;
 			// log::println("get_package_info_by_title.callback.argv: \n\t{}\n\t{}\n\t{}\n\t{}\n\t{}", argv[0], argv[1], argv[2],argv[3], argv[4]);
-			package_info p{
+			package::info p{
 				.asset_id 			= std::stoul(argv[1]),
 				.type 				= argv[2],
 				.title 				= argv[3],
@@ -188,44 +214,50 @@ namespace gdpm::cache{
 		};
 
 		/* Check to make sure the directory is there before attempting to open */
-		if(!std::filesystem::exists(cache_path))
-			std::filesystem::create_directories(cache_path);
+		if(!std::filesystem::exists(params.cache_path))
+			std::filesystem::create_directories(params.cache_path);
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("get_package_info_by_title.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"get_package_info_by_title.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 
-		std::string sql{"BEGIN TRANSACTION;"};
+		string sql{"BEGIN TRANSACTION;"};
 		for(const auto& p_title : package_titles){
-			sql += "SELECT * FROM " + table_name + " WHERE title='" + p_title + "';";
+			sql += "SELECT * FROM " + params.table_name + " WHERE title='" + p_title + "';";
 		}
 		sql += "COMMIT;";
 		// log::println(sql);
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("get_package_info_by_title.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"get_package_info_by_title.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 		sqlite3_close(db);
-		return p_vector;
+		return result_t(p_vector, error());
 	}
 
 
-	std::vector<package_info> get_installed_packages(const std::string& cache_path, const std::string& table_name){
+	result_t<package::info_list> get_installed_packages(const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
-		std::vector<package_info> p_vector;
-		std::string sql{"BEGIN TRANSACTION;"};
+		package::info_list p_vector;
+		string sql{"BEGIN TRANSACTION;"};
 
 		auto callback = [](void *data, int argc, char **argv, char **colnames){
-			std::vector<package_info> *_p_vector = (std::vector<package_info>*) data;
-			package_info p{
+			package::info_list *_p_vector = (package::info_list*) data;
+			package::info p{
 				.asset_id 			= std::stoul(argv[1]),
 				.type 				= argv[2],
 				.title 				= argv[3],
@@ -248,46 +280,55 @@ namespace gdpm::cache{
 			return 0;
 		};
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("get_installed_packages.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"get_installed_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 
-		sql += "SELECT * FROM " + table_name + " WHERE is_installed=1; COMMIT;";
+		sql += "SELECT * FROM " + params.table_name + " WHERE is_installed=1; COMMIT;";
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("get_installed_packages.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"get_installed_packages.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return {};
+			return result_t(package::info_list(), error);
 		}
 		sqlite3_close(db);
-		return p_vector;
+		return result_t(p_vector, error());
 	}
 
 
-	int update_package_info(const std::vector<package_info>& packages, const std::string& cache_path, const std::string& table_name){
+	error update_package_info(const package::info_list& packages, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
 		
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("update_package_info.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"update_package_info.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		
-		std::string sql;
+		string sql;
 		for(const auto& p : packages){
-			sql += "UPDATE " + table_name + " SET "
-			" asset_id=" + fmt::to_string(p.asset_id) + ", "
+			sql += "UPDATE " + params.table_name + " SET "
+			" asset_id=" + std::to_string(p.asset_id) + ", "
 			" type='" + p.type + "', "
 			" title='" + p.title + "', "
 			" author='" + p.author + "', " + 
-			" author_id=" + fmt::to_string(p.author_id) + ", "
+			" author_id=" + std::to_string(p.author_id) + ", "
 			" version='" + p.version + "', " + 
 			" godot_version='" + p.godot_version + "', " +
 			" cost='" + p.cost + "', " +
@@ -298,115 +339,137 @@ namespace gdpm::cache{
 			" remote_source='" + p.remote_source + "', " +
 			" download_url='" + p.download_url + "', " + 
 			" download_hash='" + p.download_hash + "', " +
-			" is_installed=" + fmt::to_string(p.is_installed) + ", " 
+			" is_installed=" + std::to_string(p.is_installed) + ", " 
 			" install_path='" + p.install_path + "'"
 			// " dependencies='" + p.dependencies + "'"
-			" WHERE title='" + p.title + "' AND asset_id=" + fmt::to_string(p.asset_id)
+			" WHERE title='" + p.title + "' AND asset_id=" + std::to_string(p.asset_id)
 			+ ";\n";
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("update_package_info.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"update_package_info.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		sqlite3_close(db);
-		return 0;
+		return error();
 	}
 
 
-	int delete_packages(const std::vector<std::string>& package_titles, const std::string& cache_path, const std::string& table_name){
+	error delete_packages(const package::title_list& package_titles, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
-		std::string sql;
+		string sql;
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("delete_packages.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"delete_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 
 		for(const auto& p_title : package_titles){
-			sql += "DELETE FROM " + table_name + " WHERE title='"
+			sql += "DELETE FROM " + params.table_name + " WHERE title='"
 			+ p_title + "';\n";
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("delete_packages.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"delete_packages.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		sqlite3_close(db);
-		return 0;
+		return error();
 	}
 
 
-	int delete_packages(const std::vector<size_t>& package_ids, const std::string& cache_path, const std::string& table_name){
+	error delete_packages(const package::id_list& package_ids, const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
-		std::string sql;
+		string sql;
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("delete_packages.sqlite3_open(): {}", errmsg);
+			error error(rc, std::format(
+				"delete_packages.sqlite3_open(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 
 		for(const auto& p_id : package_ids){
-			sql += "DELETE FROM " + table_name + " WHERE asset_id="
-			+ fmt::to_string(p_id) + ";\n";
+			sql += "DELETE FROM " + params.table_name + " WHERE asset_id="
+			+ std::to_string(p_id) + ";\n";
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("delete_packages.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"delete_packages.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		sqlite3_close(db);
-		return 0;
+		return error();
 	}
 
 
-	int drop_package_database(const std::string& cache_path, const std::string& table_name){
+	error drop_package_database(const params& params){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
-		std::string sql{"DROP TABLE IF EXISTS " + table_name + ";\n"};
+		string sql{"DROP TABLE IF EXISTS " + params.table_name + ";\n"};
 
-		int rc = sqlite3_open(cache_path.c_str(), &db);
+		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			log::error("drop_package_database.sqlite3_open(): {}", sqlite3_errmsg(db));
+			error error(rc, std::format(
+				"drop_package_database.sqlite3_open(): {}", sqlite3_errmsg(db)
+			));
+			log::error(error);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 		
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			log::error("drop_package_database.sqlite3_exec(): {}", errmsg);
+			error error(rc, std::format(
+				"drop_package_database.sqlite3_exec(): {}", errmsg
+			));
+			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
-			return rc;
+			return error;
 		}
 
-		return 0;
+		return error();
 	}
 
-	std::string to_values(const package_info& p){
-		std::string p_values{};
-		std::string p_title = p.title; /* need copy for utils::replace_all() */
 
-		p_values += fmt::to_string(p.asset_id) + ", ";
+	result_t<string> to_values(const package::info& p){
+		string p_values{};
+		string p_title = p.title; /* need copy for utils::replace_all() */
+
+		p_values += std::to_string(p.asset_id) + ", ";
 		p_values += "'" + p.type + "', ";
 		p_values += "'" + utils::replace_all(p_title, "'", "''") + "', ";
 		p_values += "'" + p.author + "', ";
-		p_values += fmt::to_string(p.author_id) + ", ";
+		p_values += std::to_string(p.author_id) + ", ";
 		p_values += "'" + p.version + "', ";
 		p_values += "'" + p.godot_version + "', ";
 		p_values += "'" + p.cost + "', ";
@@ -417,16 +480,17 @@ namespace gdpm::cache{
 		p_values += "'" + p.remote_source + "', ";
 		p_values += "'" + p.download_url + "', ";
 		p_values += "'" + p.download_hash + "', ";
-		p_values += fmt::to_string(p.is_installed) + ", ";
+		p_values += std::to_string(p.is_installed) + ", ";
 		p_values += "'" + p.install_path + "'";
-		return p_values;
+		return result_t(p_values, error());
 	}
 
-	std::string to_values(const std::vector<package_info>& packages){
-		std::string o;
+
+	result_t<string> to_values(const package::info_list& packages){
+		string o;
 		for(const auto& p : packages)
-			o += to_values(p);
-		return o;
+			o += to_values(p).unwrap_unsafe();
+		return result_t(o, error());
 	}
 
 }

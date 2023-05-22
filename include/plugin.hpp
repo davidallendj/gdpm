@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace towk::plugin{
+namespace gdpm::plugin{
 	struct info{
 		std::string name;
 		std::string description;

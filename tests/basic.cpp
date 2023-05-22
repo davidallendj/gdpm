@@ -4,11 +4,12 @@
 #include "log.hpp"
 #include "cache.hpp"
 #include "config.hpp"
+#include "package.hpp"
 
 #include <doctest.h>
 
 
-TEST_SUITE("Cache functions"){
+TEST_SUITE("Caching functions"){
 
 	TEST_CASE("Test cache database functions"){
 		gdpm::cache::create_package_database();
@@ -21,33 +22,34 @@ TEST_SUITE("Command functions"){
 	using namespace gdpm::package_manager;
 
 	config::context config = config::make_context();
-	std::vector<std::string> packages{"ResolutionManagerPlugin","godot-hmac", "Godot"};
+	package::params params = package::params();
+	package::title_list package_titles{"ResolutionManagerPlugin","godot-hmac", "Godot"};
 
 	auto check_error = [](const error& error){
-		if(error.has_error()){
-			log::error(error.get_message());
+		if(error.has_occurred()){
+			log::error(error);
 		}
 
-		CHECK(!error.has_error());
+		CHECK(!error.has_occurred());
 	};
 
 
 	TEST_CASE("Test install packages"){
-		check_error(install_packages(packages, true));
+		check_error(package::install(config, package_titles, params));
 	}
 
 
 	TEST_CASE("Test searching packages"){
-		check_error(search_for_packages(packages, true));
+		check_error(package::search(config, package_titles, params));
 	}
 
 
 	TEST_CASE("Test remove packages"){
-		check_error(remove_packages(packages, true));
+		check_error(package::remove(config, package_titles, params));
 	}
 
 	TEST_CASE("Test exporting installed package list"){
-		check_error(export_packages({"tests/gdpm/.tmp/packages.txt"}));
+		check_error(package::export_to({"tests/gdpm/.tmp/packages.txt"}));
 	}
 
 }

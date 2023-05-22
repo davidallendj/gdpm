@@ -1,7 +1,8 @@
 build/**
 builds/**
 bin/gdpm
-bin/gdpm-tests
+bin/gdpm.static
+bin/gdpm.tests
 docs/doxygen
 cache/**
 tests/*

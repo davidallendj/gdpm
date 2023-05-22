@@ -8,7 +8,20 @@
 
 
 namespace gdpm::http{
-	response request_get(const std::string& url, size_t timeout, int verbose){
+
+	string url_escape(const string &url){
+		CURL *curl = nullptr;
+		curl_global_init(CURL_GLOBAL_ALL);
+		char *escaped_url = curl_easy_escape(curl, url.c_str(), url.size());
+		std::string url_copy = escaped_url;
+		curl_global_cleanup();
+		return escaped_url;
+	}
+
+	response request_get(
+		const string& url, 
+		const http::params& params
+	){
 		CURL *curl = nullptr;
 		CURLcode res;
 		utils::memory_buffer buf = utils::make_buffer();
@@ -28,10 +41,10 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_buffer);
 			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
-			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, params.timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK && verbose > 0)
+			if(res != CURLE_OK && params.verbose > 0)
 				log::error("_make_request.curl_easy_perform(): {}", curl_easy_strerror(res));
 			curl_easy_cleanup(curl);
 		}
@@ -42,7 +55,12 @@ namespace gdpm::http{
 		return r;
 	}
 
-	response request_post(const std::string& url, const char *post_fields, size_t timeout, int verbose){
+
+	response request_post(
+		const string& url, 
+		const char *post_fields, 
+		const http::params& params
+	){
 		CURL *curl = nullptr;
 		CURLcode res;
 		utils::memory_buffer buf = utils::make_buffer();
@@ -62,10 +80,10 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_buffer);
 			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
-			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, params.timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK && verbose > 0)
+			if(res != CURLE_OK && params.verbose > 0)
 				log::error("_make_request.curl_easy_perform(): {}", curl_easy_strerror(res));
 			curl_easy_cleanup(curl);
 		}
@@ -76,7 +94,12 @@ namespace gdpm::http{
 		return r;
 	}
 
-	response download_file(const std::string& url, const std::string& storage_path, size_t timeout, int verbose){
+
+	response download_file(
+		const string& url, 
+		const string& storage_path, 
+		const http::params& params
+	){
 		CURL *curl = nullptr;
 		CURLcode res;
 		response r;
@@ -110,10 +133,10 @@ namespace gdpm::http{
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_stream);
 			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
-			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout);
+			curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, params.timeout);
 			res = curl_easy_perform(curl);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
-			if(res != CURLE_OK && verbose > 0){
+			if(res != CURLE_OK && params.verbose > 0){
 				log::error("download_file.curl_easy_perform() failed: {}", curl_easy_strerror(res));
 			}
 			fclose(fp);

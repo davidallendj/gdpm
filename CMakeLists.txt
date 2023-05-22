@@ -43,25 +43,30 @@ set(LINK_LIBS
 	SQLiteCpp
 	-lcurlpp
 	-lzip
+	-lsqlite3
+	-lcurl
 )
 
 # Set library and executable targets
 add_library(${PROJECT_NAME}-shared SHARED "${SRC}")
 add_library(${PROJECT_NAME}-static STATIC "${SRC}")
 add_executable(${PROJECT_NAME} "src/main.cpp")
-add_executable(${PROJECT_NAME}-tests "${TESTS}")
+add_executable(${PROJECT_NAME}.static "src/main.cpp")
+add_executable(${PROJECT_NAME}.tests "${TESTS}")
 
 # Set include directories for targets
 target_include_directories(${PROJECT_NAME} PRIVATE ${INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME}.static PRIVATE ${INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME}.tests PRIVATE ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-shared PRIVATE ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-static PRIVATE ${INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME}-tests PRIVATE ${INCLUDE_DIRS})
 
 # Set link libraries for targets
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
+target_link_libraries(${PROJECT_NAME}.static PRIVATE ${PROJECT_NAME}-static ${LINK_LIBS})
+target_link_libraries(${PROJECT_NAME}.tests PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-shared PRIVATE ${LINK_LIBS})
 target_link_libraries(${PROJECT_NAME}-static PRIVATE ${LINK_LIBS})
-target_link_libraries(${PROJECT_NAME}-tests PRIVATE ${PROJECT_NAME}-shared ${LINK_LIBS})
 
 # Add project unit tests
 # add_custom_target("${PROJECT_NAME}-tests" SOURCE ${TESTS})

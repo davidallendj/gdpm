@@ -1,9 +1,36 @@
 #!/bin/sh
 
+script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+exe=gdpm
+static=gdpm.static
+tests=gdpm.tests
+
+function test_link(){
+	path=$1
+	link=$2
+	if test -f "$path"
+	then
+		echo "Creating link from '$path' to '$link')"
+		if test -f "$link"
+		then
+			rm $link
+		fi
+		ln -s $path $link
+	fi
+}
+
+function test_strip(){
+	path=$1
+	if test -f "$path" 
+	then
+		echo "Stripping debug symbols from '$path'" 
+		strip "$path"
+	fi
+}
+
 # Run this script at project root
 #meson configure build
 #CXX=clang++ meson compile -C build -j$(proc)
-
 
 
 # CMake/ninja build system
@@ -13,12 +40,17 @@ ninja -C build -j $(nproc)
 
 
 # Create symlinks to executables in build folder if necessary
-if test -f "../build/gdpm"; then
-	rm bin/gdpm
-	ln -s ../build/gdpm bin/gdpm
-fi
+test_link $script_dir/../build/gdpm $script_dir/../bin/$exe
+test_link $script_dir/../build/gdpm.static $script_dir/../bin/$static
+test_link $script_dir/../build/gdpm.tests $script_dir/../bin/$tests
 
-if test -f "../build/gdpm-tests"; then
-	rm bin/gdpm-tests
-	ln -s ../build/gdpm-tests bin/gdpm-tests
-fi
+
+# Strip debug symbols
+test_strip ${script_dir}/../build/gdpm
+test_strip ${script_dir}/../build/gdpm.static
+test_strip ${script_dir}/../build/gdpm.tests
+
+
+# Generate documentation using `doxygen`
+cd ${script_dir}/..
+doxygen

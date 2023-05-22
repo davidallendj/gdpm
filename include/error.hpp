@@ -1,43 +1,90 @@
+#pragma once
 
-#include <fmt/core.h>
-#include <string>
 #include "log.hpp"
+#include "types.hpp"
+#include <fmt/core.h>
+#include <new>
+#include <string>
+#include <functional>
 
-namespace gdpm::error_codes{
+namespace gdpm::constants::error{
+
 	enum {
-		NONE				= 0,
-		UNKNOWN				= 1,
-		NOT_FOUND			= 2,
-		FILE_EXISTS 		= 3,
-		HOST_UNREACHABLE 	= 4,
+		NONE = 0,
+		UNKNOWN,
+		UNKNOWN_COMMAND,
+		NOT_FOUND,
+		NOT_DEFINED,
+		NOT_IMPLEMENTED,
+		NO_PACKAGE_FOUND,
+		PATH_NOT_DEFINED,
+		FILE_EXISTS,
+		FILE_NOT_FOUND,
+		DIRECTORY_EXISTS,
+		DIRECTORY_NOT_FOULD,
+		HOST_UNREACHABLE,
+		EMPTY_RESPONSE,
+		INVALID_ARGS,
+		INVALID_CONFIG,
+		INVALID_KEY,
+		HTTP_RESPONSE_ERROR,
+		STD_ERROR
 	};
 
-	inline std::string to_string(int error_code) {
-		return "";
+	const string_list messages {
+		"",
+		"An unknown error has occurred.",
+		"Unknown command.",
+		"Resource not found.",
+		"Function not defined.",
+		"Function not implemented.",
+		"No package found.",
+		"Path is not well-defined",
+		"File found.",
+		"File does not exist.",
+		"Directory exists.",
+		"Directory not found.",
+		"No response from host. Host is unreacheable",
+		"Empty response from host.",
+		"Invalid arguments.",
+		"Invalid configuration.",
+		"Invalid key.",
+		"An HTTP response error has occurred.",
+		"An error has occurred."
+	};
+
+
+	inline string get_message(int error_code) {
+		string message{};
+		try{ message = messages[error_code]; }
+		catch(const std::bad_alloc& e){
+			log::error("No default message for error code.");
+		}
+		return message;
 	}
 }; 
 
 namespace gdpm{
 	class error {
 	public:
-		error(int code = 0, const std::string& message = "", bool print_message = false):
-			m_code(code), m_message(message)
-		{
-			if(print_message)
-				print();
-		}
+		constexpr explicit error(int code = 0, const string& message = "{code}"):
+			m_code(code), m_message(message == "{code}" ? constants::error::get_message(code): message)
+		{}
 
 		void set_code(int code) { m_code = code; }
-		void set_message(const std::string& message) { m_message = message; }
+		void set_message(const string& message) { m_message = message; }
 
 		int get_code() const { return m_code; }
-		std::string get_message() const { return m_message; }
-		bool has_error() const { return m_code != 0; }
-		void print(){ log::println(GDPM_COLOR_LOG_ERROR "ERROR: {}" GDPM_COLOR_LOG_RESET, m_message); }
+		string get_message() const { return m_message; }
+		bool has_occurred() const { return m_code != 0; }
+
+		bool operator()(){
+			return has_occurred();
+		}
 	
 	private:
 		int m_code;
-		std::string m_message;
+		string m_message;
 	};
 
 	// Add logging function that can handle error objects

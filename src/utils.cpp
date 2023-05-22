@@ -66,14 +66,22 @@ namespace gdpm::utils{
 		return result;
 	}
 
-	std::string replace_first(std::string &s, const std::string &from, const std::string &to){
+	std::string replace_first(
+		std::string &s, 
+		const std::string &from, 
+		const std::string &to
+	){
 		size_t pos = s.find(from);
 		if(pos == std::string::npos)
 			return s;
 		return s.replace(pos, from.length(), to);
 	}
 
-	std::string replace_all(std::string& s, const std::string& from, const std::string& to){
+	std::string replace_all(
+		std::string& s, 
+		const std::string& from, 
+		const std::string& to
+	){
 		size_t pos = 0;
 		while((pos = s.find(from, pos)) != std::string::npos){
 			s.replace(pos, s.length(), to);
@@ -83,7 +91,11 @@ namespace gdpm::utils{
 	}
 
 	/* Ref: https://gist.github.com/mobius/1759816 */
-	int extract_zip(const char *archive, const char *dest, int verbose){
+	int extract_zip(
+		const char *archive, 
+		const char *dest, 
+		int verbose
+	){
 		const char *prog = "gpdm";
 		struct zip *za;
 		struct zip_file *zf;
@@ -178,5 +190,16 @@ namespace gdpm::utils{
 
 		sleep_for(millis);
 		// sleep_until(system_clock::now() + millis);
+	}
+
+	std::string join(
+		const std::vector<std::string>& target,
+		const std::string& delimiter
+	){
+		std::string o;
+		std::for_each(target.begin(), target.end(), [&o, &delimiter](const std::string& s){
+			o += s + delimiter;
+		});
+		return o;
 	}
 } // namespace gdpm::utils

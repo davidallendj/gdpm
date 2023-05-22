@@ -3,14 +3,14 @@
 
 #include "utils.hpp"
 #include "colors.hpp"
-#include <fmt/core.h>
+// #include <fmt/core.h>
 
 #if __cplusplus > 201703L
 	// #include <format>
 #else
 #endif
-#include <fmt/printf.h>
-#include <fmt/format.h>
+// #include <fmt/printf.h>
+// #include <fmt/format.h>
 
 /*
 TODO: Allow setting the logging *prefix*

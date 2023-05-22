@@ -102,21 +102,6 @@ namespace gdpm::utils{
 	std::string prompt_user(const char *message);
 	bool prompt_user_yn(const char *message);
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
+	std::string join(const std::vector<std::string>& target, const std::string& delimiter = ", ");
 	// TODO: Add function to get size of decompressed zip
-}
-
-namespace gdpm{
-	class non_copyable{
-	public:
-		non_copyable(){}
-	
-	private:
-		non_copyable(const non_copyable&);
-		non_copyable& operator=(const non_copyable&);
-	};
-
-	class non_movable{
-		non_movable(const non_movable&) = delete;
-		non_movable(non_movable&&) = delete;
-	};
 }

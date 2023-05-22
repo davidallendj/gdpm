@@ -5,6 +5,7 @@
 #include <string_view>
 
 namespace gdpm::constants{
+	const std::string RemoteName(std::string("origin"));
 	const std::string HomePath(std::string(std::getenv("HOME")) + "/");
 	const std::string TestPath(HomePath + ".config/gdpm/tests");
 	const std::string ConfigPath(HomePath + ".config/gdpm/config.json");
@@ -24,7 +25,7 @@ namespace gdpm::constants{
 #define GDPM_CONFIG_GODOT_VERSION "3.4"
 #define GDPM_CONFIG_LOCAL_PACKAGES_DIR gdpm::constants::LocalPackagesDir
 #define GDPM_CONFIG_LOCAL_TMP_DIR gdpm::constants::TemporaryPath
-#define GDPM_CONFIG_REMOTE_SOURCES constants::HostUrl 
+#define GDPM_CONFIG_REMOTE_SOURCES std::pair<std::string, std::string>(constants::RemoteName, constants::HostUrl)
 #define GDPM_CONFIG_THREADS 1
 #define GDPM_CONFIG_TIMEOUT_MS 30000
 #define GDPM_CONFIG_ENABLE_SYNC 1
