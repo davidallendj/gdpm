@@ -47,7 +47,7 @@ namespace gdpm::package {
 		bool enable_cache 			= true;
 		bool enable_sync			= true;
 		bool skip_prompt			= false;
-		string remote_source		= "";
+		string remote_source		= "origin";
 		install_method_e install_method = GLOBAL_LINK_LOCAL;
 	};
 

@@ -90,6 +90,16 @@ namespace gdpm::package{
 				return error();
 		}
 
+		/* Check if provided param is in remote sources*/
+		if(!config.remote_sources.contains(params.remote_source)){
+			error error(
+				constants::error::NOT_FOUND,
+				"Remote resource not found in config."
+			);
+			log::error(error);
+			return error;
+		}
+
 		/* Try and obtain all requested packages. */
 		std::vector<string_pair> dir_pairs;
 		task_list tasks;
@@ -161,7 +171,7 @@ namespace gdpm::package{
 
 			/* Check if we already have a stored temporary file before attempting to download */
 			if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
-				log::println("Found cached package. Skipping download.", p.title);
+				log::info("Found cached package. Skipping download.", p.title);
 			}
 			else{
 				/* Download all the package files and place them in tmp directory. */
@@ -226,7 +236,7 @@ namespace gdpm::package{
 		if(p_cache.empty()){
 			error error(
 				constants::error::NOT_FOUND,
-				"\nCould not find any packages to remove."
+				"Could not find any packages to remove."
 			);
 			log::error(error);
 			return error;
