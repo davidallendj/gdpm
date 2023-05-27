@@ -130,12 +130,12 @@ namespace gdpm::config{
 
 			/* Must check if keys exists first, then populate `_config_params`. */
 			if(doc.HasMember("remote_sources")){
-				if(doc["remote_sources"].IsArray()){
+				if(doc["remote_sources"].IsObject()){
 					const Value& srcs = doc["remote_sources"];
 					for(auto& src : srcs.GetObject()){
 						// config.remote_sources.push_back(src.GetString());
 						config.remote_sources.insert(
-							std::pair(src.name.GetString(), src.value.GetString())
+							string_pair(src.name.GetString(), src.value.GetString())
 						);
 					}
 				} else {

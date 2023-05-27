@@ -9,9 +9,11 @@
 
 int main(int argc, char **argv){
 	using namespace gdpm;
-	result_t <package_manager::exec_args> r_input = package_manager::initialize(argc, argv);
-	package_manager::exec_args input = r_input.unwrap_unsafe();
-	package_manager::execute(input.args, input.opts);
-	package_manager::finalize();	
+	using namespace gdpm::package_manager;
+	
+	result_t <exec_args> r_input = initialize(argc, argv);
+	exec_args input = r_input.unwrap_unsafe();
+	execute(input);
+	finalize();	
 	return 0;
 }

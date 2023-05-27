@@ -1,11 +1,13 @@
 
 #include "package.hpp"
 #include "error.hpp"
+#include "log.hpp"
 #include "rest_api.hpp"
 #include "config.hpp"
 #include "cache.hpp"
 #include "http.hpp"
 #include "remote.hpp"
+#include "types.hpp"
 #include <future>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
@@ -21,9 +23,16 @@ namespace gdpm::package{
 
 		/* TODO: Need a way to use remote sources from config until none left */
 
-		/* Check if the package data is already stored in cache. If it is, there 
-		is no need to do a lookup to synchronize the local database since we 
-		have all the information we need to fetch the asset data. */
+		/*
+		Implementation steps:
+
+		1. Synchronize the cache information by making a request using remote API.
+		(can skip with `--no-sync` options)
+		2. Check if the package is installed. If it is, make sure it is latest version.
+		If not, download and update to the latest version.
+		3. Extract package contents and copy/move to the correct install location.
+		*/
+
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_found = {};
 		package::info_list p_cache = result.unwrap_unsafe();
@@ -37,6 +46,8 @@ namespace gdpm::package{
 			}
 		}
 
+		/* Match queried package titles with those found in cache. */
+		log::debug("Searching for packages in cache...");
 		for(const auto& p_title : package_titles){
 			auto found = std::find_if(
 				p_cache.begin(), 
@@ -50,16 +61,26 @@ namespace gdpm::package{
 			}
 		}
 
+		/* If size of package_titles == p_found, then all packages can be installed
+		from cache and there's no need to query remote API. However, this will
+		only installed the latest *local* version and will not sync with remote. */
+		if(p_found.size() == package_titles.size()){
+			log::info("Found all packages stored in local cache.");
+		}
+
 		/* Found nothing to install so there's nothing to do at this point. */
 		if(p_found.empty()){
-			constexpr const char *message = "No packages found to install.";
-			log::error(message);
-			return error(constants::error::NOT_FOUND, message);
+			error error(
+				constants::error::NOT_FOUND,
+				"No packages found to install."
+			);
+			log::error(error);
+			return error;
 		}
 		
 		log::println("Packages to install: ");
 		for(const auto& p : p_found){
-			std::string output((p.is_installed) ? p.title + " (reinstall)" : p.title);
+			string output((p.is_installed) ? p.title + " (reinstall)" : p.title);
 			log::print("  {}  ", (p.is_installed) ? p.title + " (reinstall)" : p.title);
 		}
 		log::println("");
@@ -70,9 +91,8 @@ namespace gdpm::package{
 		}
 
 		/* Try and obtain all requested packages. */
-		using ss_pair = std::pair<std::string, std::string>;
-		std::vector<ss_pair> dir_pairs;
-		std::vector<std::future<error>> tasks;
+		std::vector<string_pair> dir_pairs;
+		task_list tasks;
 		rest_api::context rest_api_params = rest_api::make_from_config(config);
 		for(auto& p : p_found){	// TODO: Execute each in parallel using coroutines??
 
@@ -80,8 +100,8 @@ namespace gdpm::package{
 			in global storage location only. */
 
 			log::info("Fetching asset data for \"{}\"...", p.title);
-			std::string url{config.remote_sources.at(params.remote_source) + rest_api::endpoints::GET_AssetId};
-			std::string package_dir, tmp_dir, tmp_zip;
+			string url{config.remote_sources.at(params.remote_source) + rest_api::endpoints::GET_AssetId};
+			string package_dir, tmp_dir, tmp_zip;
 
 			/* Retrieve necessary asset data if it was found already in cache */
 			Document doc;
@@ -161,7 +181,7 @@ namespace gdpm::package{
 				}
 			}
 
-			dir_pairs.emplace_back(ss_pair(tmp_zip, package_dir + "/"));
+			dir_pairs.emplace_back(string_pair(tmp_zip, package_dir + "/"));
 
 			p.is_installed = true;
 			p.install_path = package_dir;
@@ -177,6 +197,16 @@ namespace gdpm::package{
 				// })
 			// );
 		}
+
+		return error();
+	}
+
+
+	error add(
+		const config::context& config,
+		const title_list& package_titles,
+		const params& params
+	){
 
 		return error();
 	}
@@ -346,11 +376,11 @@ namespace gdpm::package{
 
 	error search(
 		const config::context& config,
-		const package::title_list &package_titles, 
+		const package::title_list &package_titles,
 		const package::params& params
 	){
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
-		std::vector<package::info> p_cache = r_cache.unwrap_unsafe();
+		info_list p_cache = r_cache.unwrap_unsafe();
 		
 		if(!p_cache.empty() && !config.enable_sync){
 			print_list(p_cache);
@@ -393,22 +423,24 @@ namespace gdpm::package{
 		using namespace rapidjson;
 		using namespace std::filesystem;
 
-		if(opts.empty() || opts.contains("packages")){
+		string show((!args.empty()) ? args[0] : "");
+		if(show.empty() || show == "packages"){
 			result_t r_installed = cache::get_installed_packages();
 			info_list p_installed = r_installed.unwrap_unsafe();
 			if(!p_installed.empty()){
-				log::println("Installed packages: ");
 				print_list(p_installed);
+			} 
+			else{
+				log::println("empty");
 			}
 		}
-		else if(opts.contains("remote")){
+		else if(show == "remote"){
 			remote::print_repositories(config);
 		}
 		else{
 			error error(
 				constants::error::UNKNOWN_COMMAND,
 				"Unrecognized subcommand. Try either 'packages' or 'remote' instead."
-
 			);
 			log::error(error);
 		}
@@ -651,6 +683,28 @@ namespace gdpm::package{
 			std::filesystem::remove_all(tmp_zip);
 		}
 		log::println("Done.");
+	}
+
+
+	template <typename T>
+	auto set_if_key_exists(
+		const var_opts& o,
+		const string& k,
+		T& p
+	){
+		if(o.count(k)){ p = std::get<T>(o.at(k)); }
+	}
+
+	params make_params(const var_args& args, const var_opts& opts){
+		params p;
+		set_if_key_exists<int>(opts, "jobs", p.parallel_jobs);
+		set_if_key_exists(opts, "cache", p.enable_cache);
+		set_if_key_exists(opts, "sync", p.enable_sync);
+		set_if_key_exists(opts, "skip-prompt", p.skip_prompt);
+		set_if_key_exists(opts, "remote-source", p.remote_source);
+		// set_if_key_exists(opts, "install-method", p.install_method);
+
+		return p;
 	}
 
 

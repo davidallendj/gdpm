@@ -1,12 +1,12 @@
-
-
+#pragma once
+#include "types.hpp"
 #include <string>
 
 namespace gdpm::plugin{
 	struct info{
-		std::string name;
-		std::string description;
-		std::string version;
+		string name;
+		string description;
+		string version;
 	};
 	extern int init(int argc, char **argv);
 	extern int set_name(const char *name);

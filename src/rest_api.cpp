@@ -77,7 +77,7 @@ namespace gdpm::rest_api{
 	}
 
 	string to_string(type_e type){
-		std::string _s{"type="};
+		string _s{"type="};
 		switch(type){
 			case any:		_s += "any"; 		break;
 			case addon:		_s += "addon";		break;

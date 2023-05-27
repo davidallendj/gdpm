@@ -78,9 +78,7 @@ namespace gdpm{
 		string get_message() const { return m_message; }
 		bool has_occurred() const { return m_code != 0; }
 
-		bool operator()(){
-			return has_occurred();
-		}
+		bool operator()(){ return has_occurred(); }
 	
 	private:
 		int m_code;
@@ -89,14 +87,20 @@ namespace gdpm{
 
 	// Add logging function that can handle error objects
 	namespace log {
-		template <typename S, typename...Args>
 		static constexpr void error(const gdpm::error& e){
-#if GDPM_LOG_LEVEL > 1
+#if GDPM_LOG_LEVEL > ERROR
 			vlog(
-				fmt::format(GDPM_COLOR_LOG_ERROR "[ERROR {}" GDPM_COLOR_LOG_RESET, e.get_message()),
+				fmt::format(GDPM_COLOR_LOG_ERROR "[ERROR {}] {}\n" GDPM_COLOR_LOG_RESET, utils::timestamp(), e.get_message()),
 				fmt::make_format_args("" /*e.get_message()*/)
 			);
 #endif
+		}
+
+		template <typename S, typename...Args>
+		static constexpr void error(const S& prefix, const gdpm::error& e){
+			vlog(
+				fmt::format(GDPM_COLOR_LOG_ERROR + prefix + GDPM_COLOR_LOG_RESET, e.get_message())
+			);
 		}
 	}
 }

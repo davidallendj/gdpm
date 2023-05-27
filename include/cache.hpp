@@ -12,8 +12,8 @@
 
 namespace gdpm::cache {
 	struct params {
-		std::string cache_path	= GDPM_PACKAGE_CACHE_PATH;
-		std::string table_name	= GDPM_PACKAGE_CACHE_TABLENAME;
+		string cache_path	= GDPM_PACKAGE_CACHE_PATH;
+		string table_name	= GDPM_PACKAGE_CACHE_TABLENAME;
 	};
 
 	error create_package_database(bool overwrite = false, const params& = params());
@@ -22,11 +22,11 @@ namespace gdpm::cache {
 	result_t<package::info_list> get_package_info_by_title(const package::title_list& package_titles, const params& params = cache::params());
 	result_t<package::info_list> get_installed_packages(const params& = params());
 	error update_package_info(const package::info_list& packages, const params& = params());
-	error update_sync_info(const std::vector<std::string>& download_urls, const params& = params());
+	error update_sync_info(const args_t& download_urls, const params& = params());
 	error delete_packages(const package::title_list& package_titles, const params& = params());
 	error delete_packages(const package::id_list& package_ids, const params& = params());
 	error drop_package_database(const params& = params());
 
-	result_t<std::string> to_values(const package::info& package);
-	result_t<std::string> to_values(const package::info_list& packages);
+	result_t<string> to_values(const package::info& package);
+	result_t<string> to_values(const package::info_list& packages);
 }

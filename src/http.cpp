@@ -20,7 +20,7 @@ namespace gdpm::http{
 
 	response request_get(
 		const string& url, 
-		const http::params& params
+		const http::request_params& params
 	){
 		CURL *curl = nullptr;
 		CURLcode res;
@@ -58,8 +58,7 @@ namespace gdpm::http{
 
 	response request_post(
 		const string& url, 
-		const char *post_fields, 
-		const http::params& params
+		const http::request_params& params
 	){
 		CURL *curl = nullptr;
 		CURLcode res;
@@ -70,13 +69,25 @@ namespace gdpm::http{
 		using namespace std::chrono_literals;
 		utils::delay();
 #endif
+		string h;
+		std::for_each(
+			params.headers.begin(),
+			params.headers.end(),
+			[&h](const string_pair& kv){
+				h += kv.first + "=" + kv.second + "&";
+			}
+		);
+		h.pop_back();
+		h = url_escape(h);
 
+		// const char *post_fields = "";
 		curl_global_init(CURL_GLOBAL_ALL);
 		curl = curl_easy_init();
 		if(curl){
 			curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 			// curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
-			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_fields);
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, h.size());
+			curl_easy_setopt(curl, CURLOPT_POSTFIELDS, h.c_str());
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&buf);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, utils::curl_write_to_buffer);
 			curl_easy_setopt(curl, CURLOPT_USERAGENT, constants::UserAgent.c_str());
@@ -98,7 +109,7 @@ namespace gdpm::http{
 	response download_file(
 		const string& url, 
 		const string& storage_path, 
-		const http::params& params
+		const http::request_params& params
 	){
 		CURL *curl = nullptr;
 		CURLcode res;

@@ -36,18 +36,18 @@ namespace gdpm::package {
 		std::vector<info> dependencies;
 	};
 
+	enum install_method_e : int{
+		GLOBAL_LINK_LOCAL	= 0,
+		GLOBAL_CLONE_LOCAL	= 1,
+		GLOBAL_ONLY			= 2,
+		LOCAL_ONLY			= 3
+	};
 	struct params {
-		enum install_method_e{
-			GLOBAL_LINK_LOCAL,
-			GLOBAL_CLONE_LOCAL,
-			GLOBAL_ONLY,
-			LOCAL_ONLY
-		};
-		bool parallel_jobs 				= 1;
-		bool use_cache 					= true;
-		bool use_remote					= true;
-		bool skip_prompt				= false;
-		std::string remote_source		= "";
+		int parallel_jobs 			= 1;
+		bool enable_cache 			= true;
+		bool enable_sync			= true;
+		bool skip_prompt			= false;
+		string remote_source		= "";
 		install_method_e install_method = GLOBAL_LINK_LOCAL;
 	};
 
@@ -87,7 +87,13 @@ namespace gdpm::package {
 
 	*/
 	GDPM_DLL_EXPORT error install(const config::context& config, const title_list& package_titles, const params& params = package::params());
-	
+	/*!
+	@brief Adds package to project locally only.
+	@param config
+	@param package_titles
+	@param params 
+	*/
+	GDPM_DLL_EXPORT error add(const config::context& config, const title_list& package_titles, const params& params = package::params());
 	/*!
 	@brief Remove's package and contents from local database.
 	*/
@@ -106,6 +112,7 @@ namespace gdpm::package {
 	GDPM_DLL_EXPORT result_t<info_list> get_package_info(const opts_t& opts);
 	GDPM_DLL_EXPORT result_t<title_list> get_package_titles(const info_list& packages);
 	GDPM_DLL_EXPORT void clean_temporary(const config::context& config, const title_list& package_titles);
+	GDPM_DLL_EXPORT params make_params(const var_args& args, const var_opts& opts);
 
 	/* Dependency Management API */
 	GDPM_DLL_EXPORT result_t<info_list> synchronize_database(const config::context& config, const title_list& package_titles);
