@@ -21,16 +21,6 @@ namespace gdpm::package_manager {
 	extern CURLcode res;
 	extern config::context config;	
 
-	struct cxxargs{
-		cxxopts::ParseResult result;
-		cxxopts::Options options;
-	};
-
-	struct exec_args{
-		var_args args;
-		var_opts opts;
-	};
-
 	enum class action_e{ 
 		install, 
 		add, 
@@ -42,18 +32,17 @@ namespace gdpm::package_manager {
 		link,
 		clone,
 		clean,
+		config,
+		fetch,
 		sync,
 		remote,
+		ui,
 		help, 
 		none 
 	};
 
-	GDPM_DLL_EXPORT result_t<exec_args> initialize(int argc, char **argv);
-	GDPM_DLL_EXPORT int execute(const exec_args& in);
-	GDPM_DLL_EXPORT void finalize();
-
-	/* Auxiliary Functions */
-	GDPM_DLL_EXPORT cxxargs _parse_arguments(int argc, char **argv);
-	GDPM_DLL_EXPORT result_t<exec_args> _handle_arguments(const cxxargs& args);
+	GDPM_DLL_EXPORT error initialize(int argc, char **argv);
+	GDPM_DLL_EXPORT error parse_arguments(int argc, char **argv);
+	GDPM_DLL_EXPORT error finalize();
 	GDPM_DLL_EXPORT void run_command(action_e command, const var_args& args, const var_opts& opts);
 }

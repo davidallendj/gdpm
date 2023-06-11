@@ -13,3 +13,4 @@ vgcore.*
 .vscode
 config.json
 *.txt
+actions-runner/

@@ -3,6 +3,7 @@
 #include "config.hpp"
 #include "log.hpp"
 
+
 #include <asm-generic/errno-base.h>
 #include <chrono>
 #include <cstdio>
@@ -202,4 +203,39 @@ namespace gdpm::utils{
 		});
 		return o;
 	}
+
+	namespace json {
+
+		std::string from_array(
+			const std::set<std::string>& a, 
+			const std::string& prefix
+		){
+			std::string o{"["};
+			for(const std::string& src : a)
+				o += prefix + "\t\"" + src + "\",";
+			if(o.back() == ',')
+				o.pop_back();
+			o += prefix + "]";
+			return o;
+		};
+
+
+		std::string from_object(
+			const std::unordered_map<std::string, std::string>& m, 
+			const std::string& prefix, 
+			const std::string& spaces
+		){
+			std::string o{"{"};
+			std::for_each(m.begin(), m.end(), 
+				[&o, &prefix, &spaces](const std::pair<std::string, std::string>& p){
+					o += std::format("{}\t\"{}\":{}\"{}\",", prefix, p.first, spaces, p.second);
+				}
+			);
+			if(o.back() == ',')
+				o.pop_back();
+			o += prefix + "}";
+			return o;
+		};
+	}
+
 } // namespace gdpm::utils

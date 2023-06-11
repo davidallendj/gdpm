@@ -9,13 +9,15 @@
 #include <string>
 #include <fstream>
 #include <chrono>
+#include <unordered_map>
 #include <vector>
 #include <thread>
+#include <set>
 
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 
-namespace gdpm::utils{
+namespace gdpm::utils {
 
 	using namespace std::chrono_literals;
 
@@ -103,5 +105,11 @@ namespace gdpm::utils{
 	bool prompt_user_yn(const char *message);
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
 	std::string join(const std::vector<std::string>& target, const std::string& delimiter = ", ");
+	
 	// TODO: Add function to get size of decompressed zip
+
+	namespace json {
+		std::string from_array(const std::set<std::string>& a, const std::string& prefix);
+		std::string from_object(const std::unordered_map<std::string, std::string>& m, const std::string& prefix, const std::string& spaces);
+	}
 }

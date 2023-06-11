@@ -5,6 +5,7 @@ exe=gdpm
 static=gdpm.static
 tests=gdpm.tests
 
+
 function link_exe(){
 	path=$1
 	link=$2
@@ -19,6 +20,7 @@ function link_exe(){
 	fi
 }
 
+
 function strip(){
 	path=$1
 	if test -f "$path" 
@@ -28,11 +30,6 @@ function strip(){
 	fi
 }
 
-function generate_docs(){
-	# Generate documentation using `doxygen`
-	cd ${script_dir}/..
-	doxygen
-}
 
 function strip_all(){
 	# Strip debug symbols
@@ -41,12 +38,14 @@ function strip_all(){
 	strip ${script_dir}/../build/gdpm.tests
 }
 
+
 function link_all(){
 	# Create symlinks to executables in build folder if necessary
 	link_exe $script_dir/../build/gdpm $script_dir/../bin/$exe
 	link_exe $script_dir/../build/gdpm.static $script_dir/../bin/$static
 	link_exe $script_dir/../build/gdpm.tests $script_dir/../bin/$tests
 }
+
 
 function clean(){
 	rm ${script_dir}/../bin/$exe
@@ -58,12 +57,49 @@ function clean(){
 #meson configure build
 #CXX=clang++ meson compile -C build -j$(proc)
 
+PROCS=$(nproc)
+CMAKE_COMMAND="cmake -B build -S . -D CMAKE_EXPORT_COMPILE_COMMANDS=1 -D CMAKE_BUILD_TYPE=Debug -G Ninja"
+NINJA_COMMAND="ninja -C build -j ${PROCS}"
 
 # CMake/ninja build system
-function build_binaries(){
+function build_all(){
 	mkdir -p build
-	cmake -B build -S . -D CMAKE_EXPORT_COMPILE_COMMANDS=1 -D CMAKE_BUILD_TYPE=Debug -G Ninja
-	ninja -C build -j $(nproc)
+	$CMAKE_COMMAND
+	$NINJA_COMMAND
+}
+
+
+function build_exe(){
+	mkdir -p build
+	$CMAKE_COMMAND \
+		--target gdpm \
+		--target gdpm.static
+	$NINJA_COMMAND
+}
+
+
+function build_libs(){
+	mkdir -p build
+	$CMAKE_COMMAND \\
+		--target gdpm-static \
+		--target gdpm-shared \
+		--target gdpm-http \
+		--target gdpm-restapi
+	$NINJA_COMMAND
+}
+
+function build_tests(){
+	mkdir -p build
+	$CMAKE_COMMAND --target gdpm.tests
+	$NINJA_COMMAND
+}
+
+
+function build_docs(){
+	# Generate documentation using `doxygen`
+	pushd ${script_dir}/docs/doxygen
+	doxygen
+	popd
 }
 
 
@@ -78,12 +114,16 @@ i=$(($#-1))
 while [ $i -ge 0 ];
 do
 	case "$1" in
-		-a|--all) build_binaries shift;;
-		-c|--clean) clean shift;;
-		-d|--docs)  generate_docs shift;;
-		-s|--strip) strip_all shift;;
-		-l|--link)  link_all shift;;
-		--*) echo "Bad option: $1"
+		-a|--all) 	build_all 	shift;;
+		--exe) 		build_exe 	shift;;
+		--libs) 	build_libs 	shift;;
+		--tests) 	build_tests shift;;
+		-d|--docs)  build_docs 	shift;;
+		-c|--clean) clean 		shift;;
+		-s|--strip) strip_all 	shift;;
+		-l|--link)  link_all 	shift;;
+		--procs=*)	PROCS="${i#*=}" 	shift;;
+		-*|--*) echo "Bad option: $1"
 	esac
 	i=$((i-1))
 done

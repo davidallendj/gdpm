@@ -12,7 +12,7 @@ namespace gdpm::constants{
 	const std::string LockfilePath(HomePath + ".config/gdpm/gdpm.lck");
 	const std::string LocalPackagesDir(HomePath + ".config/gdpm/packages");
 	const std::string TemporaryPath(HomePath + ".config/gdpm/tmp");
-	const std::string UserAgent("libcurl-agent/1.0");
+	const std::string UserAgent("libcurl-agent/1.0 via GDPM (https://github.com/davidallendj/gdpm)");
 	const std::string AssetRepo("https://godotengine.org/asset-library/api/asset");
 	const std::string HostUrl("https://godotengine.org/asset-library/api");
 }

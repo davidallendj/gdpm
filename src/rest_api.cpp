@@ -1,4 +1,5 @@
 
+#include "config.hpp"
 #include "rest_api.hpp"
 #include "constants.hpp"
 #include "http.hpp"
@@ -16,26 +17,38 @@
 
 namespace gdpm::rest_api{
 	
-	context make_from_config(const config::context& config){
-		context params = make_context();
-		params.godot_version 	= config.godot_version;
+	request_params make_from_config(const config::context& config){
+		request_params params = make_request_params();
+		params.godot_version 	= config.info.godot_version;
 		params.verbose 			= config.verbose;
 		return params;
 	}
 
-	context make_context(type_e type, int category, support_e support, const std::string& filter, const std::string& user, const std::string& godot_version, int max_results, int page, sort_e sort, bool reverse, int verbose){
-		context params{
-			.type = type,
-			.category = category,
-			.support = support,
-			.filter = filter,
-			.user = user,
-			.godot_version = godot_version,
-			.max_results = max_results,
-			.page = page,
-			.sort = sort,
-			.reverse = reverse,
-			.verbose = verbose
+	request_params make_request_params(
+		type_e 			type, 
+		int 			category, 
+		support_e 		support, 
+		const string& 	filter, 
+		const string& 	user, 
+		const string& 	godot_version, 
+		int 			max_results, 
+		int 			page, 
+		sort_e 			sort, 
+		bool 			reverse, 
+		int 			verbose
+	){
+		request_params params{
+			.type 			= type,
+			.category 		= category,
+			.support 		= support,
+			.filter 		= filter,
+			.user 			= user,
+			.godot_version 	= godot_version,
+			.max_results 	= max_results,
+			.page 			= page,
+			.sort 			= sort,
+			.reverse 		= reverse,
+			.verbose 		= verbose
 		};
 		return params;
 	}
@@ -76,6 +89,10 @@ namespace gdpm::rest_api{
 		return d;
 	}
 
+	string to_json(const rapidjson::Document& doc){
+		return doc.GetString();
+	}
+
 	string to_string(type_e type){
 		string _s{"type="};
 		switch(type){
@@ -98,6 +115,7 @@ namespace gdpm::rest_api{
 	}
 
 	string to_string(sort_e sort){
+
 		string _s{"sort="};
 		switch(sort){
 			case none:		_s += "";			break;
@@ -111,13 +129,13 @@ namespace gdpm::rest_api{
 
 	string _prepare_request(
 		const string &url, 
-		const context &c
+		const request_params &c
 	){
 		string request_url{url};
-		request_url += to_string(c.type);
+		request_url += to_string(static_cast<type_e>(c.type));
 		request_url += (c.category <= 0) ? "&category=" : "&category="+std::to_string(c.category);
-		request_url += "&" + to_string(c.support);
-		request_url += "&" + to_string(c.sort);
+		request_url += "&" + to_string(static_cast<support_e>(c.support));
+		request_url += "&" + to_string(static_cast<sort_e>(c.sort));
 		request_url += (!c.filter.empty()) ? "&filter="+c.filter : "";
 		request_url += (!c.godot_version.empty()) ? "&godot_version="+c.godot_version : "";
 		request_url += "&max_results=" + std::to_string(c.max_results);
@@ -126,7 +144,7 @@ namespace gdpm::rest_api{
 		return request_url;
 	}
 
-	void _print_params(const context& params){
+	void _print_params(const request_params& params){
 		log::println("params: \n"
 			"\ttype: {}\n"
 			"\tcategory: {}\n"
@@ -170,7 +188,7 @@ namespace gdpm::rest_api{
 		bool reverse, 
 		int verbose
 	){
-		context c{
+		request_params c{
 			.type 			= type,
 			.category 		= category,
 			.support 		= support,
@@ -188,7 +206,7 @@ namespace gdpm::rest_api{
 
 	rapidjson::Document get_assets_list(
 		const string& url, 
-		const context& c
+		const request_params& c
 	){
 		string request_url = _prepare_request(url, c);
 		http::response r = http::request_get(request_url);
@@ -200,13 +218,14 @@ namespace gdpm::rest_api{
 	rapidjson::Document get_asset(
 		const string& url, 
 		int asset_id, 
-		const context& params
+		const request_params& params
 	){
 		string request_url = _prepare_request(url, params);
 		utils::replace_all(request_url, "{id}", std::to_string(asset_id));
 		http::response r = http::request_get(request_url.c_str());
 		if(params.verbose > 0)
 			log::info("URL: {}", request_url);
+		
 		return _parse_json(r.body);
 	}
 

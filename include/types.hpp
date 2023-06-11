@@ -87,6 +87,7 @@ namespace gdpm{
 		return o;
 	}
 
+
 	template <typename T>
 	constexpr void get(const var& v, T& target){
 		switch(v.index()){

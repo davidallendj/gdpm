@@ -85,7 +85,7 @@ namespace gdpm::package{
 		}
 		log::println("");
 		
-		if(!params.skip_prompt){
+		if(!config.skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to install these packages? (y/n)"))
 				return error();
 		}
@@ -103,7 +103,7 @@ namespace gdpm::package{
 		/* Try and obtain all requested packages. */
 		std::vector<string_pair> dir_pairs;
 		task_list tasks;
-		rest_api::context rest_api_params = rest_api::make_from_config(config);
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		for(auto& p : p_found){	// TODO: Execute each in parallel using coroutines??
 
 			/* Check if a remote source was provided. If not, then try to get packages
@@ -131,22 +131,6 @@ namespace gdpm::package{
 			}
 			else{
 				log::error("Not a valid package.");
-				/* Package for in cache so no remote request. Still need to populate RapidJson::Document to write to package.json.
-				NOTE: This may not be necessary at all!
-				*/
-				// doc["asset_id"].SetUint64(p.asset_id
-				// doc["type"].SetString(p.type, doc.GetAllocator());
-				// doc["title"].SetString(p.title, doc.GetAllocator());
-				// doc["author"].SetString(p.author, doc.GetAllocator());
-				// doc["author_id"].SetUint64(p.author_id);
-				// doc["version"].SetString(p.version, doc.GetAllocator());
-				// doc["category"].SetString(p.category, doc.GetAllocator());
-				// doc["godot_version"].SetString(p.godot_version, doc.GetAllocator());
-				// doc["cost"].SetString(p.cost, doc.GetAllocator());
-				// doc["description"].SetString(p.description, doc.GetAllocator());
-				// doc["support_level"].SetString(p.support_level, doc.GetAllocator());
-				// doc["download_url"].SetString(p.download_url, doc.GetAllocator());
-				// doc["download_hash"].SetString(p.download_hash, doc.GetAllocator;
 			}
 
 			/* Set directory and temp paths for storage */
@@ -263,7 +247,7 @@ namespace gdpm::package{
 				log::print("  {}  ", p.title);
 		log::println("");
 		
-		if(!params.skip_prompt){
+		if(!config.skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to remove these packages? (y/n)"))
 				return error();
 		}
@@ -336,7 +320,7 @@ namespace gdpm::package{
 		using namespace rapidjson;
 
 		/* If no package titles provided, update everything and then exit */
-		rest_api::context rest_api_params = rest_api::make_from_config(config);
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		if(package_titles.empty()){
 			std::string url{constants::HostUrl};
 			url += rest_api::endpoints::GET_AssetId;
@@ -370,7 +354,7 @@ namespace gdpm::package{
 			}
 		}
 
-		if(!params.skip_prompt){
+		if(!config.skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to update the following packages? (y/n)"))
 				return error();
 		}
@@ -397,13 +381,13 @@ namespace gdpm::package{
 			return error();
 		}
 
-		rest_api::context rest_api_params = rest_api::make_from_config(config);
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		for(const auto& p_title : package_titles){
 			using namespace rapidjson;
 		
 			rest_api_params.filter = http::url_escape(p_title);
 			rest_api_params.verbose = config.verbose;
-			rest_api_params.godot_version = config.godot_version;
+			rest_api_params.godot_version = config.info.godot_version;
 			rest_api_params.max_results = 200;
 
 			std::string request_url{constants::HostUrl};
@@ -427,13 +411,12 @@ namespace gdpm::package{
 
 	error list(
 		const config::context& config,
-		const args_t& args,
-		const opts_t& opts
+		const package::params& params
 	){
 		using namespace rapidjson;
 		using namespace std::filesystem;
 
-		string show((!args.empty()) ? args[0] : "");
+		string show((!params.sub_commands.empty()) ? params.sub_commands[0] : "");
 		if(show.empty() || show == "packages"){
 			result_t r_installed = cache::get_installed_packages();
 			info_list p_installed = r_installed.unwrap_unsafe();
@@ -493,13 +476,13 @@ namespace gdpm::package{
 	error link(
 		const config::context& config,
 		const title_list& package_titles, 
-		const opts_t& opts
+		const package::params& params
 	){
 		using namespace std::filesystem;
 
 		path_list paths = {};
-		if(opts.contains("path")){
-			paths = opts.at("path");
+		if(params.opts.contains("path")){
+			paths = get<path_list>(params.opts.at("path"));
 		}
 
 		if(paths.empty()){
@@ -567,11 +550,11 @@ namespace gdpm::package{
 	error clone(
 		const config::context& config,
 		const title_list& package_titles, 
-		const opts_t& paths
+		const package::params& params
 	){
 		using namespace std::filesystem;
 
-		if(paths.empty()){
+		if(params.opts.empty()){
 			error error(
 				constants::error::PATH_NOT_DEFINED,
 				"No path set. Use '--path' option to set a path."
@@ -609,19 +592,18 @@ namespace gdpm::package{
 		}
 
 		/* Get the storage paths for all packages to create clones */
+		path_list paths = get<path_list>(params.opts.at("--path"));
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
-			for(const auto& path_list : paths){
-				for(const auto& path : path_list.second){
-					log::info("Cloning \"{}\" package to {}", p.title, path + "/" + p.title);
-					std::filesystem::path from{config.packages_dir + "/" + p.title};
-					std::filesystem::path to{path + "/" + p.title};
-					if(!std::filesystem::exists(to.string()))
-						std::filesystem::create_directories(to);
+			for(const auto& path : paths){
+				log::info("Cloning \"{}\" package to {}", p.title, path + "/" + p.title);
+				std::filesystem::path from{config.packages_dir + "/" + p.title};
+				std::filesystem::path to{path + "/" + p.title};
+				if(!std::filesystem::exists(to.string()))
+					std::filesystem::create_directories(to);
 
-					/* TODO: Add an option to force overwriting (i.e. --overwrite) */
-					std::filesystem::copy(from, to, copy_options::update_existing | copy_options::recursive);
-				}
+				/* TODO: Add an option to force overwriting (i.e. --overwrite) */
+				std::filesystem::copy(from, to, copy_options::update_existing | copy_options::recursive);
 			}
 		}
 		return error();
@@ -705,12 +687,11 @@ namespace gdpm::package{
 		if(o.count(k)){ p = std::get<T>(o.at(k)); }
 	}
 
-	params make_params(const var_args& args, const var_opts& opts){
+	params make_params(
+		const var_args& args, 
+		const var_opts& opts
+	){
 		params p;
-		set_if_key_exists<int>(opts, "jobs", p.parallel_jobs);
-		set_if_key_exists(opts, "cache", p.enable_cache);
-		set_if_key_exists(opts, "sync", p.enable_sync);
-		set_if_key_exists(opts, "skip-prompt", p.skip_prompt);
 		set_if_key_exists(opts, "remote-source", p.remote_source);
 		// set_if_key_exists(opts, "install-method", p.install_method);
 
@@ -724,13 +705,13 @@ namespace gdpm::package{
 	){
 		using namespace rapidjson;
 
-		rest_api::context rest_api_params = rest_api::make_from_config(config);
-		rest_api_params.page = 0;
-		int page = 0;
-		int page_length = 0;
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
+		rest_api_params.page 	= 0;
+		int page 				= 0;
+		int page_length 		= 0;
+		int total_items 		= 0;
+		int items_left 			= 0;
 		// int total_pages = 0;
-		int total_items = 0;
-		int items_left = 0;
 
 		log::info("Sychronizing database...");
 		do{
@@ -823,5 +804,14 @@ namespace gdpm::package{
 		}
 
 		return result_t(p_deps, error());
+	}
+
+	string to_json(
+		const info& info, 
+		bool pretty_pretty
+	){
+		string json("");
+
+		return json;
 	}
 }

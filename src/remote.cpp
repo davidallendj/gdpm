@@ -6,10 +6,10 @@
 #include <readline/readline.h>
 
 namespace gdpm::remote{
-	error _handle_remote(
+	error handle_remote(
 		config::context& config, 
 		const args_t& args, 
-		const opts_t& opts
+		const var_opts& opts
 	){
 		/* Check if enough arguments are supplied */
 		size_t argc = args.size();

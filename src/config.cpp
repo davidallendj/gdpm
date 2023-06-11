@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include "constants.hpp"
 #include "error.hpp"
+#include "types.hpp"
 
 // RapidJSON
 #include <rapidjson/ostreamwrapper.h>
@@ -31,43 +32,30 @@
 
 namespace gdpm::config{
 	context config;
-	std::string to_json(const context& params){
-		auto _build_json_array = [](std::set<std::string> a){
-			std::string o{"["};
-			for(const std::string& src : a)
-				o += "\"" + src + "\",";
-			if(o.back() == ',')
-				o.pop_back();
-			o += "]";
-			return o;
-		};
-
-		auto _build_json_object = [](const string_map& m){
-			string o{"{"};
-			std::for_each(m.begin(), m.end(), [&o](const string_pair& p){
-				o += std::format("\n\"{}\": \"{}\",", p.first, p.second);
-			});
-			if(o.back() == ',')
-				o.pop_back();
-			o += "}";
-			return o;
-		};
+	
+	string to_json(
+		const context& config, 
+		bool pretty_print
+	){
+		
 
 		/* Build a JSON string to pass to document */
+		string prefix = (pretty_print) ? "\n\t" : "";
+		string spaces = (pretty_print) ? "    " : "";
 		string json{
-			"{\"username\":\"" + params.username + "\","
-			+ "\"password\":\"" + params.password + "\","
-			+ "\"path\":\"" + params.path + "\","
-			+ "\"token\":\"" + params.token + "\","
-			+ "\"godot_version\":\"" + params.godot_version + "\","
-			+ "\"packages_dir\":\"" + params.packages_dir + "\","
-			+ "\"tmp_dir\":\"" + params.tmp_dir + "\","
-			+ "\"remote_sources\":" + _build_json_object(params.remote_sources) + ","
-			+ "\"threads\":" + fmt::to_string(params.threads) + ","
-			+ "\"timeout\":" + fmt::to_string(params.timeout) + ","
-			+ "\"enable_sync\":" + fmt::to_string(params.enable_sync) + ","
-			+ "\"enable_file_logging\":" + fmt::to_string(params.enable_file_logging)
-			+ "}"
+			"{" + prefix + "\"username\":" + spaces + "\"" + config.username + "\","
+			+ prefix + "\"password\":" + spaces + "\"" + config.password + "\","
+			+ prefix + "\"path\":"+ spaces + "\"" + config.path + "\","
+			+ prefix + "\"token\":" + spaces + "\"" + config.token + "\","
+			+ prefix + "\"godot_version\":" + spaces + "\"" + config.info.godot_version + "\","
+			+ prefix + "\"packages_dir\":" + spaces + "\"" + config.packages_dir + "\","
+			+ prefix + "\"tmp_dir\":" + spaces + "\"" + config.tmp_dir + "\","
+			+ prefix + "\"remote_sources\":" + spaces + utils::json::from_object(config.remote_sources, prefix, spaces) + ","
+			+ prefix + "\"threads\":" + spaces + fmt::to_string(config.jobs) + ","
+			+ prefix + "\"timeout\":" + spaces + fmt::to_string(config.timeout) + ","
+			+ prefix + "\"enable_sync\":" + spaces + fmt::to_string(config.enable_sync) + ","
+			+ prefix + "\"enable_file_logging\":" + spaces + fmt::to_string(config.enable_file_logging)
+			+ "\n}"
 		};
 		return json;
 	}
@@ -75,16 +63,15 @@ namespace gdpm::config{
 
 	error load(
 		std::filesystem::path path, 
-		context& config, 
-		int verbose
+		context& config
 	){
 		std::fstream file;
 		file.open(path, std::ios::in);
 		if(!file){
-			if(verbose)
+			if(config.verbose)
 				log::info("No configuration file found. Creating a new one.");
 			config = make_context();
-			save(config.path, config, verbose);
+			save(config.path, config);
 			return error();
 		}
 		else if(file.is_open()){
@@ -100,7 +87,7 @@ namespace gdpm::config{
 			while(std::getline(file, line))
 				contents += line + "\n";
 
-			if(verbose > 0)
+			if(config.verbose > 0)
 				log::info("Loading configuration file...\n{}", contents.c_str());
 			
 			Document doc;
@@ -164,10 +151,10 @@ namespace gdpm::config{
 			config.password 			= _get_value_string(doc, "password");
 			config.path 				= _get_value_string(doc, "path");
 			config.token 				= _get_value_string(doc, "token");
-			config.godot_version 		= _get_value_string(doc, "godot_version");
+			config.info.godot_version 	= _get_value_string(doc, "godot_version");
 			config.packages_dir 		= _get_value_string(doc, "packages_dir");
 			config.tmp_dir 				= _get_value_string(doc, "tmp_dir");
-			config.threads 				= _get_value_int(doc, "threads");
+			config.jobs 				= _get_value_int(doc, "threads");
 			config.enable_sync 			= _get_value_int(doc, "enable_sync");
 			config.enable_file_logging 	= _get_value_int(doc, "enable_file_logging");
 		}
@@ -177,14 +164,13 @@ namespace gdpm::config{
 
 	error save(
 		std::filesystem::path path, 
-		const context& config, 
-		int verbose
+		const context& config
 	){
 		using namespace rapidjson;
 
 		/* Build a JSON string to pass to document */
 		string json = to_json(config);
-		if(verbose > 0)
+		if(config.verbose > 0)
 			log::info("Saving configuration file...\n{}", json.c_str());
 		
 		/* Dump JSON config to file */
@@ -199,6 +185,52 @@ namespace gdpm::config{
 		return gdpm::error();
 	}
 
+
+	error handle_config(
+		config::context& config,
+		const args_t& args,
+		const var_opts& opts
+	){
+		std::for_each(opts.begin(), opts.end(), [](const var_opt& p){
+			log::println("opt: {}", p.first);
+
+			if (p.second.index() == STRING_LIST){
+				string_list p_list = get<string_list>(p.second);
+				std::for_each(p_list.begin(), p_list.end(), [](const string& o){
+					log::println("\t{}", o);
+				});
+			}
+		});
+
+		log::println("opts count: {}", opts.size());
+		if(opts.contains("--username")){
+			string_list v = get<string_list>(opts.at("--username"));
+			log::println("username: {}", v[0]);
+			if(v.empty()){
+				log::println("username: {}", v[0]);
+			}
+			else
+				config.username = v[0];
+		}
+		if(opts.contains("godot_version")){
+			string_list v = get<string_list>(opts.at("godot-version"));
+			if(v.empty()){
+				// print godot-version
+			}
+			else
+				config.info.godot_version = get<string_list>(opts.at("godot-version"))[0];
+		}
+		if(opts.contains("threads")){
+			string_list v = get<string_list>(opts.at("threads"));
+			if(v.empty()){
+				
+			}
+		}
+
+		save(config.path, config);
+
+		return error();
+	}
 
 	context make_context(
 		const string& username, 
@@ -216,19 +248,21 @@ namespace gdpm::config{
 		int verbose
 	){
 		context config {
-			.username = username,
-			.password = password,
-			.path = path,
-			.token = token,
-			.godot_version = godot_version,
-			.packages_dir = (packages_dir.empty()) ? string(getenv("HOME")) + ".gdpm" : packages_dir,
-			.tmp_dir = tmp_dir,
-			.remote_sources = remote_sources,
-			.threads = threads,
-			.timeout = timeout,
-			.enable_sync = enable_sync,
-			.enable_file_logging = enable_file_logging,
-			.verbose = verbose
+			.username 				= username,
+			.password 				= password,
+			.path 					= path,
+			.token 					= token,
+			.packages_dir 			= (packages_dir.empty()) ? string(getenv("HOME")) + ".gdpm" : packages_dir,
+			.tmp_dir 				= tmp_dir,
+			.remote_sources 		= remote_sources,
+			.jobs 					= threads,
+			.timeout 				= timeout,
+			.enable_sync 			= enable_sync,
+			.enable_file_logging 	= enable_file_logging,
+			.verbose 				= verbose,
+			.info 					= {
+				.godot_version = godot_version,
+			},
 		};
 		return config;
 	}
@@ -250,6 +284,10 @@ namespace gdpm::config{
 		}
 		error.set_code(constants::error::NONE);
 		return error;
+	}
+
+	void print(const context& config){
+		log::println("{}", to_json(config, true));
 	}
 
 }

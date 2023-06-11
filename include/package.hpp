@@ -5,13 +5,17 @@
 #include "package.hpp"
 #include "types.hpp"
 #include "result.hpp"
-#include "config.hpp"
+#include "rest_api.hpp"
 #include <cstdio>
 #include <filesystem>
 #include <string>
 #include <vector>
 #include <rapidjson/document.h>
 
+
+namespace gdpm::config{
+	struct context;
+}
 
 namespace gdpm::package {
 
@@ -42,13 +46,14 @@ namespace gdpm::package {
 		GLOBAL_ONLY			= 2,
 		LOCAL_ONLY			= 3
 	};
+
 	struct params {
-		int parallel_jobs 			= 1;
-		bool enable_cache 			= true;
-		bool enable_sync			= true;
-		bool skip_prompt			= false;
-		string remote_source		= "origin";
-		install_method_e install_method = GLOBAL_LINK_LOCAL;
+		args_t 				sub_commands;
+		var_opts 			opts;
+		string_list			paths;
+		string_list			input_files;
+		string 				remote_source			= "origin";
+		install_method_e 	install_method = GLOBAL_LINK_LOCAL;
 	};
 
 	using info_list 	= std::vector<info>;
@@ -101,10 +106,10 @@ namespace gdpm::package {
 	GDPM_DLL_EXPORT error remove_all(const config::context& config, const params& params = package::params());
 	GDPM_DLL_EXPORT error update(const config::context& config, const title_list& package_titles, const params& params = package::params());
 	GDPM_DLL_EXPORT error search(const config::context& config, const title_list& package_titles, const params& params = package::params());
-	GDPM_DLL_EXPORT error list(const config::context& config, const args_t& args, const opts_t& opts);
+	GDPM_DLL_EXPORT error list(const config::context& config, const params& params = package::params());
 	GDPM_DLL_EXPORT error export_to(const path_list& paths);
-	GDPM_DLL_EXPORT error link(const config::context& config, const title_list& package_titles, const opts_t& opts);
-	GDPM_DLL_EXPORT error clone(const config::context& config, const title_list& package_titles, const opts_t& opts);
+	GDPM_DLL_EXPORT error link(const config::context& config, const title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT error clone(const config::context& config, const title_list& package_titles, const params& params = package::params());
 
 
 	GDPM_DLL_EXPORT void print_list(const rapidjson::Document& json);
@@ -117,4 +122,6 @@ namespace gdpm::package {
 	/* Dependency Management API */
 	GDPM_DLL_EXPORT result_t<info_list> synchronize_database(const config::context& config, const title_list& package_titles);
 	GDPM_DLL_EXPORT result_t<info_list> resolve_dependencies(const config::context& config, const title_list& package_titles);
+
+	GDPM_DLL_EXPORT string to_json(const info& info, bool pretty_print = false);
 }

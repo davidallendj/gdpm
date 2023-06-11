@@ -31,8 +31,8 @@ jobs:
     
     - name: Build
       run:
-        echo -e "Building executable and libraries...\n$PWD"
-        ./bin/compile.sh
+        echo -e "Building executable, libraries, documentation, and symlinks...\n$PWD"
+        ./bin/compile.sh --all --docs --link --strip
   
     - name: Test
       run: 

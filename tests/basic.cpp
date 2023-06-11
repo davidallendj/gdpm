@@ -21,10 +21,26 @@ TEST_SUITE("Command functions"){
 	using namespace gdpm;
 	using namespace gdpm::package_manager;
 
-	config::context config = config::make_context();
-	package::params params = package::params();
+	package::params params = package::params{
+		.remote_source	= "test"
+	};
+	config::context config = config::context{
+		.username 		= "",
+		.password 		= "",
+		.path			= "tests/gdpm/config.json",
+		.packages_dir	= "tests/gdpm/packages",
+		.tmp_dir		= "tests/gdpm/.tmp",
+		.remote_sources	= {
+			{"test", "http://godotengine.org/asset-library/api"}
+		},
+		.info {
+			.godot_version	= "latest",
+		}
+	};
+
 	package::title_list package_titles{"ResolutionManagerPlugin","godot-hmac", "Godot"};
 
+	/* Set the default parameters to use. */
 	auto check_error = [](const error& error){
 		if(error.has_occurred()){
 			log::error(error);
