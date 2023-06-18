@@ -8,6 +8,8 @@
 #include "http.hpp"
 #include "remote.hpp"
 #include "types.hpp"
+#include "utils.hpp"
+#include <functional>
 #include <future>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
@@ -31,6 +33,7 @@ namespace gdpm::package{
 		2. Check if the package is installed. If it is, make sure it is latest version.
 		If not, download and update to the latest version.
 		3. Extract package contents and copy/move to the correct install location.
+
 		*/
 
 		result_t result = cache::get_package_info_by_title(package_titles);
@@ -167,7 +170,7 @@ namespace gdpm::package{
 					log::println("Done.");
 				}else{
 					error error(
-						constants::error::HTTP_RESPONSE_ERROR,
+						constants::error::HTTP_RESPONSE_ERR,
 						std::format("HTTP Error: {}", response.code)
 					);
 					log::error(error);
@@ -186,7 +189,12 @@ namespace gdpm::package{
 
 			/* Update the cache data with information from  */
 			log::info_n("Updating local asset data...");
-			cache::update_package_info(p_found);
+			error error = cache::update_package_info(p_found);
+			if(error()){
+				log::error(error);
+				return error;
+			}
+
 			log::println("done.");
 				// })
 			// );
@@ -201,7 +209,8 @@ namespace gdpm::package{
 		const title_list& package_titles,
 		const params& params
 	){
-
+		/* Install packages in local project instead of package database.
+		This will not cache the package information in the cache database. */
 		return error();
 	}
 
@@ -289,7 +298,13 @@ namespace gdpm::package{
 		}
 		log::println("Done.");
 		log::info_n("Updating local asset data...");
-		cache::update_package_info(p_cache);
+		{
+			error error = cache::update_package_info(p_cache);
+			if(error.has_occurred()){
+				log::error(error);
+				return error;
+			}
+		}
 		log::println("done.");
 
 		return error();
@@ -402,7 +417,7 @@ namespace gdpm::package{
 				return error;
 			}
 
-			log::info("{} package(s) found...", doc["total_items"].GetInt());
+			// log::info("{} package(s) found...", doc["total_items"].GetInt());
 			print_list(doc);
 		}
 		return error();
@@ -416,16 +431,13 @@ namespace gdpm::package{
 		using namespace rapidjson;
 		using namespace std::filesystem;
 
-		string show((!params.sub_commands.empty()) ? params.sub_commands[0] : "");
+		string show((!params.args.empty()) ? params.args[0] : "");
 		if(show.empty() || show == "packages"){
 			result_t r_installed = cache::get_installed_packages();
 			info_list p_installed = r_installed.unwrap_unsafe();
 			if(!p_installed.empty()){
 				print_list(p_installed);
 			} 
-			else{
-				log::println("empty");
-			}
 		}
 		else if(show == "remote"){
 			remote::print_repositories(config);
@@ -476,30 +488,27 @@ namespace gdpm::package{
 	error link(
 		const config::context& config,
 		const title_list& package_titles, 
-		const package::params& params
+		const package::params& params /* path is last arg */
 	){
 		using namespace std::filesystem;
 
-		path_list paths = {};
-		if(params.opts.contains("path")){
-			paths = get<path_list>(params.opts.at("path"));
-		}
-
-		if(paths.empty()){
+		if(params.args.empty()){
 			error error(
-				constants::error::PATH_NOT_DEFINED,
-				"No path set. Use '--path' option to set a path."
+				constants::error::INVALID_ARG_COUNT,
+				"Must supply at least 2 arguments (package name and path)"
 			);
 			log::error(error);
 			return error;
 		}
+
+		/* Check for packages in cache to link */
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
 		info_list p_found = {};
 		info_list p_cache = r_cache.unwrap_unsafe();
 		if(p_cache.empty()){
 			error error(
 				constants::error::NOT_FOUND,
-				"Could not find any packages to link."
+				"Could not find any packages to link in cache."
 			);
 			log::error(error);
 			return error;
@@ -522,20 +531,22 @@ namespace gdpm::package{
 		}
 
 		/* Get the storage paths for all packages to create symlinks */
+		path_refs paths = path_refs({params.args.back()});
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
 			for(const auto& path : paths){
-				log::info_n("Creating symlink for \"{}\" package to '{}'...", p.title, path + "/" + p.title);
+				const string _path = path;
+				log::info_n("link: \"{}\" -> '{}'...", p.title, _path + "/" + p.title);
 				// std::filesystem::path target{config.packages_dir + "/" + p.title};
 				std::filesystem::path target = {current_path().string() + "/" + config.packages_dir + "/" + p.title};
-				std::filesystem::path symlink_path{path + "/" + p.title};
+				std::filesystem::path symlink_path{_path + "/" + p.title};
 				if(!std::filesystem::exists(symlink_path.string()))
-					std::filesystem::create_directories(path + "/");
+					std::filesystem::create_directories(_path + "/");
 				std::error_code ec;
 				std::filesystem::create_directory_symlink(target, symlink_path, ec);
 				if(ec){
 					error error(
-						constants::error::STD_ERROR,
+						constants::error::STD_ERR,
 						std::format("Could not create symlink: {}", ec.message())
 					);
 					log::error(error);
@@ -554,10 +565,10 @@ namespace gdpm::package{
 	){
 		using namespace std::filesystem;
 
-		if(params.opts.empty()){
+		if(params.args.empty()){
 			error error(
-				constants::error::PATH_NOT_DEFINED,
-				"No path set. Use '--path' option to set a path."
+				constants::error::INVALID_ARG_COUNT,
+				"Must supply at least 2 arguments (package name and path)"
 			);
 			log::error(error);
 			return error;
@@ -565,18 +576,25 @@ namespace gdpm::package{
 
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
 		package::info_list p_found = {};
-		package::info_list p_cache = r_cache.unwrap_unsafe(); 
+		package::info_list p_cache = r_cache.unwrap_unsafe();
+
+		/* Check for installed packages to clone */
 		if(p_cache.empty()){
 			error error(
 				constants::error::NO_PACKAGE_FOUND,
-				"Could not find any packages to clone."
+				"Could not find any packages to clone in cache."
 			);
 			log::error(error);
 			return error;
 		}
 
 		for(const auto& p_title : package_titles){
-			auto found = std::find_if(p_cache.begin(), p_cache.end(), [&p_title](const package::info& p){ return p.title == p_title; });
+			auto found = std::find_if(
+				p_cache.begin(), 
+				p_cache.end(), 
+				[&p_title](const package::info& p){ 
+					return p.title == p_title; 
+			});
 			if(found != p_cache.end()){
 				p_found.emplace_back(*found);
 			}
@@ -592,15 +610,17 @@ namespace gdpm::package{
 		}
 
 		/* Get the storage paths for all packages to create clones */
-		path_list paths = get<path_list>(params.opts.at("--path"));
+		path_refs paths = path_refs{params.args.back()};
+		// path_list paths = path_list({params.args.back()});
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
 			for(const auto& path : paths){
-				log::info("Cloning \"{}\" package to {}", p.title, path + "/" + p.title);
+				const string _path = string(path);
+				log::info("clone: \"{}\" -> {}", p.title, _path + "/" + p.title);
 				std::filesystem::path from{config.packages_dir + "/" + p.title};
-				std::filesystem::path to{path + "/" + p.title};
+				std::filesystem::path to{_path + "/" + p.title};
 				if(!std::filesystem::exists(to.string()))
-					std::filesystem::create_directories(to);
+					std::filesystem::create_directories(to); /* This should only occur if using a --force flag */
 
 				/* TODO: Add an option to force overwriting (i.e. --overwrite) */
 				std::filesystem::copy(from, to, copy_options::update_existing | copy_options::recursive);
@@ -609,19 +629,23 @@ namespace gdpm::package{
 		return error();
 	}
 
-
 	void print_list(const info_list& packages){
 		for(const auto& p : packages){
-			log::println("{}/{}/{}  {}  id={}\n\tGodot {}, {}, {}, Last Modified: {}",
+			log::println(
+				GDPM_COLOR_BLUE"{}/" 
+				GDPM_COLOR_RESET "{}/{}/{}  " 
+				GDPM_COLOR_GREEN "v{}  " 
+				GDPM_COLOR_CYAN "{}  " 
+				GDPM_COLOR_RESET "Godot {},  {}",
 				p.support_level,
+				p.category,
 				p.author,
 				p.title,
 				p.version,
-				p.asset_id,
+				p.modify_date,
+				// p.asset_id,
 				p.godot_version,
-				p.cost,
-				p.category,
-				p.modify_date
+				p.cost
 			);
 		}
 	}
@@ -629,16 +653,22 @@ namespace gdpm::package{
 
 	void print_list(const rapidjson::Document& json){
 		for(const auto& o : json["result"].GetArray()){
-			log::println("{}/{}/{}  {}  id={}\n\tGodot {}, {}, {}, Last Modified: {}",
+			log::println(
+				GDPM_COLOR_BLUE"{}/" 
+				GDPM_COLOR_CYAN "{}/" 
+				GDPM_COLOR_RESET "{}/{}  " 
+				GDPM_COLOR_GREEN "v{}  " 
+				GDPM_COLOR_CYAN "{}  " 
+				GDPM_COLOR_RESET "Godot {},  {}",
 				o["support_level"]	.GetString(), 
+				utils::to_lower(o["category"].GetString()),
 				o["author"]			.GetString(),
 				o["title"]			.GetString(),
 				o["version_string"]	.GetString(), 
-				o["asset_id"]		.GetString(),
+				o["modify_date"]	.GetString(),
+				// o["asset_id"]		.GetString(),
 				o["godot_version"]	.GetString(),
-				o["cost"]			.GetString(),
-				o["category"]		.GetString(),
-				o["modify_date"]	.GetString()
+				o["cost"]			.GetString()
 			);
 		}
 	}

@@ -50,7 +50,7 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 *   doctest (optional; for tests, but still WIP)
 
-*   cxxopts (header only)
+*   clipp (header only)
 
 *   SQLite 3
 

@@ -37,8 +37,6 @@ namespace gdpm::config{
 		const context& config, 
 		bool pretty_print
 	){
-		
-
 		/* Build a JSON string to pass to document */
 		string prefix = (pretty_print) ? "\n\t" : "";
 		string spaces = (pretty_print) ? "    " : "";
@@ -232,6 +230,7 @@ namespace gdpm::config{
 		return error();
 	}
 
+
 	context make_context(
 		const string& username, 
 		const string& password, 
@@ -286,8 +285,60 @@ namespace gdpm::config{
 		return error;
 	}
 
-	void print(const context& config){
+	void print_json(const context& config){
 		log::println("{}", to_json(config, true));
+	}
+
+	void _print_property(
+		const context& config,
+		const string& property
+	){
+		if(property.empty())					return;
+		else if(property == "username") 		log::println("username: {}", config.username);
+		else if(property == "password") 		log::println("password: {}", config.password);
+		else if(property == "path") 			log::println("path: {}", config.path);
+		else if(property == "token") 			log::println("token: {}", config.token);
+		else if(property == "packages_dir") 	log::println("package directory: {}", config.packages_dir);
+		else if(property == "tmp_dir") 			log::println("temporary directory: {}", config.tmp_dir);
+		else if(property == "remote_sources") 	log::println("remote sources: \n{}", utils::join(config.remote_sources, "\t", "\n"));
+		else if(property == "jobs") 			log::println("parallel jobs: {}", config.jobs);
+		else if(property == "timeout") 			log::println("timeout: {}", config.timeout);
+		else if(property == "sync") 			log::println("enable sync: {}", config.enable_sync);
+		else if(property == "cache") 			log::println("enable cache: {}", config.enable_cache);
+		else if(property == "prompt") 			log::println("skip prompt: {}", config.skip_prompt);
+		else if(property == "logging") 			log::println("enable file logging: {}", config.enable_file_logging);
+		else if(property == "clean") 			log::println("clean temporary files: {}", config.clean_temporary);
+		else if(property == "verbose") 			log::println("verbose: {}", config.verbose);
+	}
+
+	void print_properties(
+		const context& config,
+		const string_list& properties
+	){
+		if(properties.empty()){
+			_print_property(config, "username");
+			_print_property(config, "password");
+			_print_property(config, "path");
+			_print_property(config, "token");
+			_print_property(config, "packages_dir");
+			_print_property(config, "tmp_dir");
+			_print_property(config, "remote_sources");
+			_print_property(config, "jobs");
+			_print_property(config, "timeout");
+			_print_property(config, "sync");
+			_print_property(config, "cache");
+			_print_property(config, "prompt");
+			_print_property(config, "logging");
+			_print_property(config, "clean");
+			_print_property(config, "verbose");
+		}
+		std::for_each(
+			properties.begin(),
+			properties.end(),
+			[&config](const string& property){
+				_print_property(config, property);
+			}
+		);
 	}
 
 }

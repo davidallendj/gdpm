@@ -15,6 +15,7 @@ namespace gdpm::constants{
 	const std::string UserAgent("libcurl-agent/1.0 via GDPM (https://github.com/davidallendj/gdpm)");
 	const std::string AssetRepo("https://godotengine.org/asset-library/api/asset");
 	const std::string HostUrl("https://godotengine.org/asset-library/api");
+	constexpr std::string WHITESPACE = " \n\r\t\f\v";
 }
 
 /* Define default macros to set when building with -DGPM_* */

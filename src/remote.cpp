@@ -6,88 +6,48 @@
 #include <readline/readline.h>
 
 namespace gdpm::remote{
-	error handle_remote(
-		config::context& config, 
-		const args_t& args, 
-		const var_opts& opts
+	
+	error add_repository(
+		config::context &config, 
+		const args_t &args
 	){
-		/* Check if enough arguments are supplied */
-		size_t argc = args.size();
-		if (argc < 1){
-			print_repositories(config);
-			return error();
+		/* Check if enough args were provided. */
+		log::debug("arg count: {}\nargs: {}", args.size(), utils::join(args));
+		if (args.size() < 2){
+			return error(
+				constants::error::INVALID_ARG_COUNT,
+				"Requires a remote name and url argument"
+			);
 		}
 
-		/* Check which subcommand is supplied */
-		string sub_command = args.front();
-		if(sub_command == "add"){
-			if(args.size() < 3 || args.empty()){
-				error error(
-					constants::error::INVALID_ARG_COUNT,
-					"Invalid number of args."
-				);
-				log::error(error);
-				return error;
-			}
-			string name = args[1];
-			string url = args[2];
-			add_repositories(config, {{name, url}});
-		}
-		else if (sub_command == "remove") {
-			if(args.size() < 2 || args.empty()){
-				error error(
-					constants::error::INVALID_ARG_COUNT,
-					"Invalid number of args."
-				);
-				log::error(error);
-				return error;
-			}
-			remove_respositories(config, {args.begin()+1, args.end()});
-		}
-		// else if (sub_command == "set")		set_repositories(config::context &context, const repository_map &repos)
-		else if (sub_command == "list")		print_repositories(config);
-		else{
-			error error(
-				constants::error::UNKNOWN,
-				"Unknown sub-command. Try 'gdpm help remote' for options."
-			);
-			log::error(error);
-			return error;
-		}
+		/* Get the first two args */
+		log::println("{}", args[0]);
+		config.remote_sources.insert({args[0], args[1]});
 		return error();
 	}
 
-	
-	void set_repositories(
+
+	error remove_respositories(
 		config::context& config, 
-		const repository_map &repos
+		const args_t& args
 	){
-		config.remote_sources = repos;
-	}
+		log::debug("arg count: {}\nargs: {}", args.size(), utils::join(args));
+		if(args.size() < 1){
+			return error(
+				constants::error::INVALID_ARG_COUNT,
+				"Requires at least one remote name argument"
+			);
+		}
 
-
-	void add_repositories(
-		config::context& config, 
-		const repository_map &repos
-	){
-		std::for_each(repos.begin(), repos.end(), 
-			[&config](const string_pair& p){
-				config.remote_sources.insert(p);
-			}
-		);
-	}
-
-
-	void remove_respositories(
-		config::context& config, 
-		const repo_names& names
-	){
-		for(auto it = names.begin(); it != names.end();){
+		for(auto it = args.begin(); it != args.end();){
 			if(config.remote_sources.contains(*it)){
+				log::println("{}", *it);
 				config.remote_sources.erase(*it);
 			}
 			it++;
 		}
+
+		return error();
 	}
 
 

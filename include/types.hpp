@@ -101,5 +101,4 @@ namespace gdpm{
 			default: 			/*return*/ target = 0;
 		}
 	}
-
 }

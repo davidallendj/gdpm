@@ -43,7 +43,8 @@ namespace gdpm::config{
 	error handle_config(config::context& config, const args_t& args, const var_opts& opts);
 	context make_context(const string& username = GDPM_CONFIG_USERNAME, const string& password = GDPM_CONFIG_PASSWORD, const string& path = GDPM_CONFIG_PATH, const string& token = GDPM_CONFIG_TOKEN, const string& godot_version = GDPM_CONFIG_GODOT_VERSION, const string& packages_dir = GDPM_CONFIG_LOCAL_PACKAGES_DIR, const string& tmp_dir = GDPM_CONFIG_LOCAL_TMP_DIR, const string_map& remote_sources = {GDPM_CONFIG_REMOTE_SOURCES}, size_t threads = GDPM_CONFIG_THREADS, size_t timeout = 0, bool enable_sync = GDPM_CONFIG_ENABLE_SYNC, bool enable_file_logging = GDPM_CONFIG_ENABLE_FILE_LOGGING, int verbose = GDPM_CONFIG_VERBOSE);
 	error validate(const rapidjson::Document& doc);
-	void print(const context& config);
+	void print_json(const context& config);
+	void print_properties(const context& config, const string_list& properties);
 
 	extern context config;
 }

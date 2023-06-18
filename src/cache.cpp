@@ -1,5 +1,6 @@
 
 #include "cache.hpp"
+#include "error.hpp"
 #include "log.hpp"
 #include "constants.hpp"
 #include "package.hpp"
@@ -12,7 +13,10 @@
 
 
 namespace gdpm::cache{
-	error create_package_database(bool overwrite, const params& params){
+	error create_package_database(
+		bool overwrite, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg;
@@ -77,7 +81,10 @@ namespace gdpm::cache{
 	}
 
 
-	error insert_package_info(const package::info_list& packages, const params& params){
+	error insert_package_info(
+		const package::info_list& packages, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
@@ -115,7 +122,10 @@ namespace gdpm::cache{
 	}
 
 
-	result_t<package::info_list> get_package_info_by_id(const package::id_list& package_ids, const params& params){
+	result_t<package::info_list> get_package_info_by_id(
+		const package::id_list& package_ids, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
@@ -179,7 +189,10 @@ namespace gdpm::cache{
 	}
 
 
-	result_t<package::info_list> get_package_info_by_title(const package::title_list& package_titles, const params& params){
+	result_t<package::info_list> get_package_info_by_title(
+		const package::title_list& package_titles, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
@@ -306,17 +319,20 @@ namespace gdpm::cache{
 	}
 
 
-	error update_package_info(const package::info_list& packages, const params& params){
+	error update_package_info(
+		const package::info_list& packages, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
 		
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(
+				constants::error::SQLITE_ERR, std::format(
 				"update_package_info.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
@@ -360,7 +376,10 @@ namespace gdpm::cache{
 	}
 
 
-	error delete_packages(const package::title_list& package_titles, const params& params){
+	error delete_packages(
+		const package::title_list& package_titles, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;
@@ -395,7 +414,10 @@ namespace gdpm::cache{
 	}
 
 
-	error delete_packages(const package::id_list& package_ids, const params& params){
+	error delete_packages(
+		const package::id_list& package_ids, 
+		const params& params
+	){
 		sqlite3 *db;
 		sqlite3_stmt *res;
 		char *errmsg = nullptr;

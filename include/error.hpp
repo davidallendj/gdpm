@@ -29,8 +29,10 @@ namespace gdpm::constants::error{
 		INVALID_ARG_COUNT,
 		INVALID_CONFIG,
 		INVALID_KEY,
-		HTTP_RESPONSE_ERROR,
-		STD_ERROR
+		HTTP_RESPONSE_ERR,
+		SQLITE_ERR,
+		JSON_ERR,
+		STD_ERR
 	};
 
 	const string_list messages {

@@ -5,6 +5,7 @@
 #include "config.hpp"
 #include "package_manager.hpp"
 #include "result.hpp"
+#include <cstdlib>
 
 
 int main(int argc, char **argv){
@@ -13,6 +14,7 @@ int main(int argc, char **argv){
 	
 	error error = initialize(argc, argv);
 	parse_arguments(argc, argv);
-	finalize();	
-	return 0;
+	finalize();
+	
+	return EXIT_SUCCESS;
 }

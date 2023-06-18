@@ -16,7 +16,6 @@
 #include <curl/curl.h>
 
 namespace gdpm::package_manager {
-	extern remote::repository_map remote_sources;
 	extern CURL *curl;
 	extern CURLcode res;
 	extern config::context config;	
@@ -32,10 +31,13 @@ namespace gdpm::package_manager {
 		link,
 		clone,
 		clean,
-		config,
+		config_get,
+		config_set,
 		fetch,
 		sync,
-		remote,
+		remote_add,
+		remote_remove,
+		remote_list,
 		ui,
 		help, 
 		none 

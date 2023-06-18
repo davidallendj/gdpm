@@ -8,6 +8,7 @@
 #include "rest_api.hpp"
 #include <cstdio>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 #include <rapidjson/document.h>
@@ -48,11 +49,11 @@ namespace gdpm::package {
 	};
 
 	struct params {
-		args_t 				sub_commands;
+		args_t 				args;
 		var_opts 			opts;
 		string_list			paths;
 		string_list			input_files;
-		string 				remote_source			= "origin";
+		string 				remote_source  = "origin";
 		install_method_e 	install_method = GLOBAL_LINK_LOCAL;
 	};
 
@@ -61,6 +62,7 @@ namespace gdpm::package {
 	using id_list 		= std::vector<size_t>;
 	using path 			= std::string;
 	using path_list		= std::vector<path>;
+	using path_refs		= std::vector<std::reference_wrapper<const path>>;
 
 	/*! 
 	@brief Install a Godot package from the Asset Library in the current project.

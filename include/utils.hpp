@@ -96,7 +96,12 @@ namespace gdpm::utils {
 	}
 	
 	std::string readfile(const std::string& path);
-	void to_lower(std::string& s);
+	std::string to_lower(const std::string& s);
+	std::string trim(const std::string& s);
+	std::string trim_left(const std::string& s);
+	std::string trim_left(const std::string& s, const std::string& ref);
+	std::string trim_right(const std::string& s);
+	std::string trim_right(const std::string& s, const std::string& ref);
 	std::vector<std::string> parse_lines(const std::string& s);
 	std::string replace_first(std::string& s, const std::string& from, const std::string& to);
 	std::string replace_all(std::string& s, const std::string& from, const std::string& to);
@@ -105,7 +110,7 @@ namespace gdpm::utils {
 	bool prompt_user_yn(const char *message);
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
 	std::string join(const std::vector<std::string>& target, const std::string& delimiter = ", ");
-	
+	std::string join(const std::unordered_map<std::string, std::string>& target, const std::string& prefix = "", const std::string& delimiter = "\n");
 	// TODO: Add function to get size of decompressed zip
 
 	namespace json {

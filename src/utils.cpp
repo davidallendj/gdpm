@@ -1,6 +1,7 @@
 
 #include "utils.hpp"
 #include "config.hpp"
+#include "constants.hpp"
 #include "log.hpp"
 
 
@@ -13,9 +14,12 @@
 #include <fcntl.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
+#include <readline/chardefs.h>
 #include <readline/readline.h>
 
+#include <string>
 #include <thread>
+#include <unordered_map>
 #include <zip.h>
 
 namespace gdpm::utils{
@@ -53,8 +57,38 @@ namespace gdpm::utils{
 	}
 #endif
 
-	void to_lower(std::string& s){
-		std::transform(s.begin(), s.end(), s.begin(), tolower);
+	std::string to_lower(const std::string& s){
+		std::string copy = s;
+		std::transform(copy.begin(), copy.end(), copy.begin(), tolower);
+		return copy;
+	}
+
+	std::string trim(const std::string& s){
+		return trim_right(trim_left(s));
+	}
+
+	std::string trim_left(const std::string& s){		
+		return trim_left(s, constants::WHITESPACE);
+	}
+
+	std::string trim_left(
+		const std::string& s, 
+		const std::string& ref
+	){
+		size_t start = s.find_first_not_of(ref);
+		return (start == std::string::npos) ? "" : s.substr(start);	
+	}
+
+	std::string trim_right(const std::string& s){
+		return trim_right(s, constants::WHITESPACE);
+	}
+
+	std::string trim_right(
+		const std::string& s, 
+		const std::string& ref
+	){
+		size_t end =  s.find_last_not_of(ref);
+		return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 	}
 
 	std::vector<std::string> parse_lines(const std::string &s){
@@ -97,7 +131,7 @@ namespace gdpm::utils{
 		const char *dest, 
 		int verbose
 	){
-		const char *prog = "gpdm";
+		constexpr const char *prog = "gpdm";
 		struct zip *za;
 		struct zip_file *zf;
 		struct zip_stat sb;
@@ -198,9 +232,31 @@ namespace gdpm::utils{
 		const std::string& delimiter
 	){
 		std::string o;
-		std::for_each(target.begin(), target.end(), [&o, &delimiter](const std::string& s){
-			o += s + delimiter;
-		});
+		std::for_each(
+			target.begin(), 
+			target.end(), 
+			[&o, &delimiter](const std::string& s){
+				o += s + delimiter;
+			}
+		);
+		o = trim_right(o, delimiter);
+		return o;
+	}
+
+	std::string join(
+		const std::unordered_map<std::string, std::string>& target,
+		const std::string& prefix,
+		const std::string& delimiter
+	){
+		std::string o;
+		std::for_each(
+			target.begin(),
+			target.end(),
+			[&o, &prefix, &delimiter](const std::pair<std::string, std::string>& p){
+				o += prefix + p.first + ": " + p.second + delimiter;
+			}
+		);
+		o = trim_right(o, delimiter);
 		return o;
 	}
 
