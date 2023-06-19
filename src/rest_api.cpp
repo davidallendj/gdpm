@@ -18,8 +18,9 @@
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
-		request_params params = make_request_params();
-		params.godot_version 	= config.info.godot_version;
+		bool is_latest = (config.info.godot_version.empty() || config.info.godot_version == "latest");
+		request_params params 	= make_request_params();
+		params.godot_version 	= (is_latest) ? "" : config.info.godot_version;
 		params.verbose 			= config.verbose;
 		return params;
 	}
@@ -37,7 +38,7 @@ namespace gdpm::rest_api{
 		bool 			reverse, 
 		int 			verbose
 	){
-		request_params params{
+		return request_params{
 			.type 			= type,
 			.category 		= category,
 			.support 		= support,
@@ -50,7 +51,6 @@ namespace gdpm::rest_api{
 			.reverse 		= reverse,
 			.verbose 		= verbose
 		};
-		return params;
 	}
 
 	bool register_account(
@@ -211,7 +211,7 @@ namespace gdpm::rest_api{
 		string request_url = _prepare_request(url, c);
 		http::response r = http::request_get(request_url);
 		if(c.verbose > 0)
-			log::info("URL: {}", request_url);
+			log::info("get_asset().URL: {}", request_url);
 		return _parse_json(r.body, c.verbose);
 	}
 
@@ -220,11 +220,10 @@ namespace gdpm::rest_api{
 		int asset_id, 
 		const request_params& params
 	){
-		string request_url = _prepare_request(url, params);
-		utils::replace_all(request_url, "{id}", std::to_string(asset_id));
+		string request_url = utils::replace_all(_prepare_request(url, params), "{id}", std::to_string(asset_id));
 		http::response r = http::request_get(request_url.c_str());
-		if(params.verbose > 0)
-			log::info("URL: {}", request_url);
+		if(params.verbose >= log::INFO)
+			log::info("get_asset().URL: {}", request_url);
 		
 		return _parse_json(r.body);
 	}

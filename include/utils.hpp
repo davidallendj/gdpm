@@ -103,8 +103,8 @@ namespace gdpm::utils {
 	std::string trim_right(const std::string& s);
 	std::string trim_right(const std::string& s, const std::string& ref);
 	std::vector<std::string> parse_lines(const std::string& s);
-	std::string replace_first(std::string& s, const std::string& from, const std::string& to);
-	std::string replace_all(std::string& s, const std::string& from, const std::string& to);
+	std::string replace_first(const std::string& s, const std::string& from, const std::string& to);
+	std::string replace_all(const std::string& s, const std::string& from, const std::string& to);
 	int extract_zip(const char *archive, const char *dest, int verbose = 0);
 	std::string prompt_user(const char *message);
 	bool prompt_user_yn(const char *message);

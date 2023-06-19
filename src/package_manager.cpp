@@ -106,8 +106,9 @@ namespace gdpm::package_manager{
 		auto packageDirOpt		= option("--package-dir").set(config.packages_dir) % "set the global package location";
 		auto tmpDirOpt			= option("--tmp-dir").set(config.tmp_dir) % "set the temporary download location";
 		auto timeoutOpt			= option("--timeout").set(config.timeout) % "set the request timeout";
-		auto verboseOpt 			= repeatable(option("-v", "--verbose", "-v").call([]{ config.verbose += 1; })) % "show verbose output";	
-		
+		auto verboseOpt 				= joinable(repeatable(option("-v", "--verbose").call([]{ config.verbose += 1; }))) % "show verbose output";	
+		auto versionOpt			= option("--version").set(action, action_e::version);
+
 		/* Set the options */
 		auto cleanOpt 			= option("--clean").set(config.clean_temporary) % "enable/disable cleaning temps";
 		auto parallelOpt 		= option("--jobs").set(config.jobs) % "set number of parallel jobs";
@@ -207,7 +208,7 @@ namespace gdpm::package_manager{
 		);
 
 		auto cli = (
-			debugOpt, configOpt,
+			debugOpt, configOpt, verboseOpt, versionOpt,
 			(installCmd | addCmd | removeCmd | updateCmd | searchCmd | exportCmd |
 			listCmd | linkCmd | cloneCmd | cleanCmd | configCmd | fetchCmd |
 			remoteCmd | uiCmd | helpCmd)
@@ -249,6 +250,7 @@ namespace gdpm::package_manager{
 				case action_e::remote_remove: 	remote::remove_respositories(config, params.args); break;
 				case action_e::ui:				log::println("UI not implemented yet"); break;
 				case action_e::help: 			log::println("{}", man_page_format); break;
+				case action_e::version:			break;
 				case action_e::none:			/* ...here to run with no command */ break;
 			}
 		} else {

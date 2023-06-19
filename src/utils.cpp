@@ -102,27 +102,29 @@ namespace gdpm::utils{
 	}
 
 	std::string replace_first(
-		std::string &s, 
+		const std::string &s, 
 		const std::string &from, 
 		const std::string &to
 	){
-		size_t pos = s.find(from);
+		std::string copy = s; // make string copy
+		size_t pos = copy.find(from);
 		if(pos == std::string::npos)
-			return s;
-		return s.replace(pos, from.length(), to);
+			return copy;
+		return copy.replace(pos, from.length(), to);
 	}
 
 	std::string replace_all(
-		std::string& s, 
+		const std::string& s, 
 		const std::string& from, 
 		const std::string& to
 	){
+		std::string copy = s; // make string copy
 		size_t pos = 0;
-		while((pos = s.find(from, pos)) != std::string::npos){
-			s.replace(pos, s.length(), to);
+		while((pos = copy.find(from, pos)) != std::string::npos){
+			copy.replace(pos, s.length(), to);
 			pos += to.length();
 		}
-		return s;
+		return copy;
 	}
 
 	/* Ref: https://gist.github.com/mobius/1759816 */
@@ -204,17 +206,18 @@ namespace gdpm::utils{
 	std::string prompt_user(const char *message){
 		log::print("{} ", message);
 		std::string input;
-		std::cin >> input;
+		// std::cin >> input;
+		getline(std::cin, input);
 		return input;
 	}
 	
 	bool prompt_user_yn(const char *message){
-		std::string input{"y"};
-		do{
-			input = utils::prompt_user(message);
-			to_lower(input);
-			input = (input == "\0" || input == "\n" || input.empty()) ? "y" : input;
-		}while( !std::cin.fail() && input != "y" && input != "n");
+		std::string input{""};
+		while( !std::cin.fail() && input != "y" && input != "n" ){
+			bool is_default = (input == "\0" || input == "\n" || input == "\r\n" || input.empty());
+			input = to_lower(utils::prompt_user(message));
+			input = is_default ? "y" : input;
+		} 
 		return input == "y";
 	}
 

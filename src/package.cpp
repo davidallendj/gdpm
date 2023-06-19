@@ -1,5 +1,6 @@
 
 #include "package.hpp"
+#include "colors.hpp"
 #include "error.hpp"
 #include "log.hpp"
 #include "rest_api.hpp"
@@ -11,6 +12,7 @@
 #include "utils.hpp"
 #include <functional>
 #include <future>
+#include <rapidjson/error/en.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 
@@ -89,7 +91,7 @@ namespace gdpm::package{
 		log::println("");
 		
 		if(!config.skip_prompt){
-			if(!utils::prompt_user_yn("Do you want to install these packages? (y/n)"))
+			if(!utils::prompt_user_yn("Do you want to install these packages? (Y/n)"))
 				return error();
 		}
 
@@ -118,13 +120,14 @@ namespace gdpm::package{
 
 			/* Retrieve necessary asset data if it was found already in cache */
 			Document doc;
-			bool is_valid = p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty();
-			if(is_valid){
+			bool is_missing_data = p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty();
+			if(is_missing_data){
 				doc = rest_api::get_asset(url, p.asset_id, rest_api_params);
 				if(doc.HasParseError() || doc.IsNull()){
-					constexpr const char *message = "\nError parsing HTTP response.";
+					const std::string message = std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()));
 					log::error(message);
-					return error(doc.GetParseError(), message);
+					
+					return error(constants::error::JSON_ERR, std::format("{}: {}", message, GetParseError_En(doc.GetParseError())));
 				}
 				p.category			= doc["category"].GetString();
 				p.description 		= doc["description"].GetString();
@@ -133,7 +136,7 @@ namespace gdpm::package{
 				p.download_hash 	= doc["download_hash"].GetString();
 			}
 			else{
-				log::error("Not a valid package.");
+				log::info("Found asset data found for \"{}\"", p.title);
 			}
 
 			/* Set directory and temp paths for storage */
@@ -162,10 +165,8 @@ namespace gdpm::package{
 			}
 			else{
 				/* Download all the package files and place them in tmp directory. */
-				log::info_n("Downloading \"{}\"...", p.title);
-				std::string download_url = p.download_url;// doc["download_url"].GetString();
-				std::string title = p.title;// doc["title"].GetString();
-				http::response response = http::download_file(download_url, tmp_zip);
+				log::info("Downloading \"{}\"...", p.title);
+				http::response response = http::download_file(p.download_url, tmp_zip);
 				if(response.code == http::OK){
 					log::println("Done.");
 				}else{
@@ -190,12 +191,13 @@ namespace gdpm::package{
 			/* Update the cache data with information from  */
 			log::info_n("Updating local asset data...");
 			error error = cache::update_package_info(p_found);
-			if(error()){
-				log::error(error);
+			if(error.has_occurred()){
+				string prefix = std::format(log::get_error_prefix(), utils::timestamp());
+				log::println(GDPM_COLOR_LOG_ERROR"\n{}{}" GDPM_COLOR_RESET, prefix, error.get_message());
 				return error;
 			}
 
-			log::println("done.");
+			log::println("Done.");
 				// })
 			// );
 		}
@@ -301,11 +303,11 @@ namespace gdpm::package{
 		{
 			error error = cache::update_package_info(p_cache);
 			if(error.has_occurred()){
-				log::error(error);
+				log::error("\n{}", error.get_message());
 				return error;
 			}
 		}
-		log::println("done.");
+		log::println("Done.");
 
 		return error();
 	}

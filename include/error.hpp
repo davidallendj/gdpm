@@ -93,18 +93,17 @@ namespace gdpm{
 	namespace log {
 		static constexpr void error(const gdpm::error& e){
 #if GDPM_LOG_LEVEL > ERROR
+			set_prefix_if(std::format("[ERROR {}] ", utils::timestamp()), true);
+			set_suffix_if("\n");
 			vlog(
-				fmt::format(GDPM_COLOR_LOG_ERROR "[ERROR {}] {}\n" GDPM_COLOR_LOG_RESET, utils::timestamp(), e.get_message()),
-				fmt::make_format_args("" /*e.get_message()*/)
+				fmt::format(GDPM_COLOR_LOG_ERROR "{}{}\n" GDPM_COLOR_LOG_RESET, prefix.contents, e.get_message()),
+				fmt::make_format_args(prefix.contents, e.get_message())
 			);
 #endif
 		}
 
-		template <typename S, typename...Args>
-		static constexpr void error(const S& prefix, const gdpm::error& e){
-			vlog(
-				fmt::format(GDPM_COLOR_LOG_ERROR + prefix + GDPM_COLOR_LOG_RESET, e.get_message())
-			);
+		static void error(const char *p, const gdpm::error& e){
+			println("{}{}{}", p, prefix.contents, e.get_message());
 		}
 	}
 }

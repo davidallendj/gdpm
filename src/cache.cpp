@@ -13,6 +13,10 @@
 
 
 namespace gdpm::cache{
+	std::string _escape_sql(const std::string& s){
+		return utils::replace_all(s, "'", "''");
+	}
+
 	error create_package_database(
 		bool overwrite, 
 		const params& params
@@ -31,13 +35,12 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc,
+			error error(constants::error::SQLITE_ERR,
 				std::format(
 					"create_package_database.sqlite3_open(): {}",
 					sqlite3_errmsg(db)
 				)
 			);
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
@@ -67,11 +70,10 @@ namespace gdpm::cache{
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
 			// log::error("Failed to fetch data: {}\n", sqlite3_errmsg(db));
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"create_package_database.sqlite3_exec(): {}", 
 				errmsg
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;
@@ -99,11 +101,10 @@ namespace gdpm::cache{
 		// log::println("{}", sql);
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"insert_package_info.sqlite3_open(): {}", 
 				sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
@@ -162,10 +163,9 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"get_package_info_by_id.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
 		}
@@ -176,10 +176,9 @@ namespace gdpm::cache{
 		sql += "COMMIT;\n";
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"get_package_info_by_id.sqlite3_exec(): {}", errmsg
 			));
-			log::error("get_package_info_by_id.sqlite3_exec(): {}", errmsg);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
@@ -232,10 +231,9 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"get_package_info_by_title.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
 		}
@@ -248,10 +246,9 @@ namespace gdpm::cache{
 		// log::println(sql);
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"get_package_info_by_title.sqlite3_exec(): {}", errmsg
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
@@ -295,10 +292,9 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"get_installed_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
 		}
@@ -339,34 +335,33 @@ namespace gdpm::cache{
 		
 		string sql;
 		for(const auto& p : packages){
-			sql += "UPDATE " + params.table_name + " SET "
-			" asset_id=" + std::to_string(p.asset_id) + ", "
-			" type='" + p.type + "', "
-			" title='" + p.title + "', "
-			" author='" + p.author + "', " + 
-			" author_id=" + std::to_string(p.author_id) + ", "
-			" version='" + p.version + "', " + 
-			" godot_version='" + p.godot_version + "', " +
-			" cost='" + p.cost + "', " +
-			" description='" + p.description + "', " +
-			" modify_date='" + p.modify_date + "', " +
-			" support_level='" + p.support_level + "', " +
-			" category='" + p.category + "', " +
-			" remote_source='" + p.remote_source + "', " +
-			" download_url='" + p.download_url + "', " + 
-			" download_hash='" + p.download_hash + "', " +
-			" is_installed=" + std::to_string(p.is_installed) + ", " 
-			" install_path='" + p.install_path + "'"
+			sql += "UPDATE " 	+ params.table_name + " SET "
+			" asset_id=" 		+ std::to_string(p.asset_id) + ", "
+			" type='" 			+ _escape_sql(p.type) + "', "
+			" title='" 			+ _escape_sql(p.title) + "', "
+			" author='" 		+ _escape_sql(p.author) + "', " + 
+			" author_id=" 		+ std::to_string(p.author_id) + ", "
+			" version='" 		+ _escape_sql(p.version) + "', " + 
+			" godot_version='" 	+ _escape_sql(p.godot_version) + "', " +
+			" cost='" 			+ _escape_sql(p.cost) + "', " +
+			" description='" 	+ _escape_sql(p.description) + "', " +
+			" modify_date='" 	+ _escape_sql(p.modify_date) + "', " +
+			" support_level='" 	+ _escape_sql(p.support_level) + "', " +
+			" category='" 		+ _escape_sql(p.category) + "', " +
+			" remote_source='" 	+ _escape_sql(p.remote_source) + "', " +
+			" download_url='" 	+ _escape_sql(p.download_url) + "', " + 
+			" download_hash='" 	+ _escape_sql(p.download_hash) + "', " +
+			" is_installed=" 	+ std::to_string(p.is_installed) + ", " 
+			" install_path='" 	+ _escape_sql(p.install_path) + "'"
 			// " dependencies='" + p.dependencies + "'"
-			" WHERE title='" + p.title + "' AND asset_id=" + std::to_string(p.asset_id)
+			" WHERE title='" 	+ p.title + "' AND asset_id=" + std::to_string(p.asset_id)
 			+ ";\n";
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
-				"update_package_info.sqlite3_exec(): {}", errmsg
+			error error(constants::error::SQLITE_ERR, std::format(
+				"update_package_info.sqlite3_exec(): {}\n\t{}", errmsg, sql
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;
@@ -387,10 +382,9 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"delete_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
@@ -401,10 +395,9 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"delete_packages.sqlite3_exec(): {}", errmsg
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;
@@ -425,10 +418,9 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"delete_packages.sqlite3_open(): {}", errmsg
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
@@ -439,10 +431,9 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"delete_packages.sqlite3_exec(): {}", errmsg
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;
@@ -460,20 +451,18 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"drop_package_database.sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
-			log::error(error);
 			sqlite3_close(db);
 			return error;
 		}
 		
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
+			error error(constants::error::SQLITE_ERR, std::format(
 				"drop_package_database.sqlite3_exec(): {}", errmsg
 			));
-			log::error(error);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;

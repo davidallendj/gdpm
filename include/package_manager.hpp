@@ -40,6 +40,7 @@ namespace gdpm::package_manager {
 		remote_list,
 		ui,
 		help, 
+		version,
 		none 
 	};
 

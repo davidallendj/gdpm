@@ -25,10 +25,10 @@ namespace gdpm::log
 	
 	enum level_e : int{
 		NONE 	= 0,
-		INFO	= 1,
-		WARNING	= 2,
+		ERROR	= 1,
+		INFO	= 2,
 		DEBUG	= 3,
-		ERROR	= 4
+		WARNING	= 4,
 	};
 
 	enum flag_opt {
@@ -36,11 +36,17 @@ namespace gdpm::log
 		PRINT_STDERR = 0b00000010
 	};
 
-	static int level				= INFO;
-	static string prefix			= "";
-	static string suffix			= "";
-	static string path				= "";
-	static std::bitset<8> flags		= PRINT_STDOUT | PRINT_STDERR;
+	struct prefix {
+		string contents 		= "";
+		string enclosing_start 	= "]";
+		string enclosing_end 	= "[";
+	};
+
+	static int level						= INFO;
+	static prefix prefix					= {};
+	static string suffix					= "";
+	static string path						= "";
+	static std::bitset<8> flags				= PRINT_STDOUT | PRINT_STDERR;
 	static bool print_to_stdout;	
 	static bool print_to_stderr;
 
@@ -60,13 +66,17 @@ namespace gdpm::log
 		return flags.test(flag);
 	}
 
-	inline constexpr void set_prefix_if(const std::string& v, bool predicate = !prefix.empty()){
-		prefix = (predicate) ? v : prefix;
+	inline constexpr void set_prefix_if(const std::string& v, bool predicate = prefix.contents.empty()){
+		prefix.contents = (predicate) ? v : prefix.contents;
 	}
 
-	inline constexpr void set_suffix_if(const std::string& v, bool predicate = !suffix.empty()){
+	inline constexpr void set_suffix_if(const std::string& v, bool predicate = suffix.empty()){
 		suffix = (predicate) ? v : suffix;
 	}
+
+	inline constexpr const char* get_info_prefix() { return "[INFO {}] "; }
+	inline constexpr const char* get_error_prefix() { return "[ERROR {}] "; }
+	inline constexpr const char* get_debug_prefix() { return "[DEBUG {}] "; }
 
 	static void vlog(fmt::string_view format, fmt::format_args args){
 		fmt::vprint(format, args);
@@ -81,10 +91,10 @@ namespace gdpm::log
 		if(log::level < to_int(log::INFO))
 			return;
 #if GDPM_LOG_LEVEL > NONE
-		set_prefix_if(fmt::format("[INFO {}] ", utils::timestamp()));
+		set_prefix_if(fmt::format( get_info_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix, format, suffix),
+			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -95,10 +105,10 @@ namespace gdpm::log
 		if(log::level < to_int(log::INFO))
 			return;
 #if GDPM_LOG_LEVEL > INFO
-		set_prefix_if(fmt::format("[INFO {}] ", utils::timestamp()));
-		set_suffix_if("");
+		set_prefix_if(fmt::format(get_info_prefix(), utils::timestamp()), true);
+		set_suffix_if("", true);
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix, format, suffix),
+			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -109,10 +119,10 @@ namespace gdpm::log
 		if(log::level < to_int(log::ERROR))
 			return;
 #if GDPM_LOG_LEVEL > ERROR
-		set_prefix_if(std::format("[ERROR {}] ", utils::timestamp()));
+		set_prefix_if(std::format(get_error_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_ERROR "{}{}{}" GDPM_COLOR_LOG_RESET, prefix, format, suffix),
+			fmt::format(GDPM_COLOR_LOG_ERROR "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -123,10 +133,10 @@ namespace gdpm::log
 		if(log::level < to_int(log::DEBUG))
 			return;
 #if GDPM_LOG_LEVEL > DEBUG
-		set_prefix_if(std::format("[DEBUG {}] ", utils::timestamp()));
+		set_prefix_if(std::format(get_debug_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_DEBUG "{}{}{}" GDPM_COLOR_LOG_RESET, prefix, format, suffix),
+			fmt::format(GDPM_COLOR_LOG_DEBUG "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
 			fmt::make_format_args(args...)
 		);
 #endif
