@@ -96,7 +96,6 @@ namespace gdpm::package_manager{
 		/* Set global options */
 		auto debugOpt			= option("-d", "--debug").set(config.verbose, to_int(log::DEBUG)) % "show debug output";
 		auto configOpt 			= option("--config-path").set(config.path) % "set config path";
-		auto fileOpt 			= repeatable(option("--file", "-f").set(params.args)  % "read file as input");
 		auto pathOpt				= option("--path").set(params.paths) % "specify a path to use with command";
 		auto typeOpt 			= option("--type").set(config.info.type) % "set package type (any|addon|project)";
 		auto sortOpt 			= option("--sort").set(config.api_params.sort) % "sort packages in order (rating|cost|name|updated)";
@@ -107,14 +106,14 @@ namespace gdpm::package_manager{
 		auto tmpDirOpt			= option("--tmp-dir").set(config.tmp_dir) % "set the temporary download location";
 		auto timeoutOpt			= option("--timeout").set(config.timeout) % "set the request timeout";
 		auto verboseOpt 				= joinable(repeatable(option("-v", "--verbose").call([]{ config.verbose += 1; }))) % "show verbose output";	
-		auto versionOpt			= option("--version").set(action, action_e::version);
 
 		/* Set the options */
+		auto fileOpt 			= repeatable(option("--file", "-f").set(params.args)  % "read file as input");
 		auto cleanOpt 			= option("--clean").set(config.clean_temporary) % "enable/disable cleaning temps";
 		auto parallelOpt 		= option("--jobs").set(config.jobs) % "set number of parallel jobs";
 		auto cacheOpt 			= option("--enable-cache").set(config.enable_cache) % "enable/disable local caching";
 		auto syncOpt 			= option("--enable-sync").set(config.enable_sync) % "enable/disable remote syncing";
-		auto skipOpt 			= option("--skip-prompt").set(config.skip_prompt) % "skip the y/n prompt";
+		auto skipOpt 			= option("-y", "--skip-prompt").set(config.skip_prompt, true) % "skip the y/n prompt";
 		auto remoteOpt			= option("--remote").set(params.remote_source) % "set remote source to use";
 		
 		auto packageValues 		= values("packages", package_titles);
@@ -123,16 +122,17 @@ namespace gdpm::package_manager{
 		auto installCmd = "install" % (
 			command("install").set(action, action_e::install),
 			packageValues % "packages to install from asset library",
-			godotVersionOpt, cleanOpt, parallelOpt, syncOpt, skipOpt, remoteOpt
+			godotVersionOpt, cleanOpt, parallelOpt, syncOpt, skipOpt, remoteOpt, fileOpt
 		);
 		auto addCmd = "add" % (
 			command("add").set(action, action_e::add),
 			packageValues % "package(s) to add to local project", 
-			parallelOpt, skipOpt, remoteOpt
+			parallelOpt, skipOpt, remoteOpt, fileOpt
 		);
 		auto removeCmd = "remove" % (
 			command("remove").set(action, action_e::remove),
-			packageValues % "package(s) to remove from local project"
+			packageValues % "package(s) to remove from local project",
+			fileOpt
 		);
 		auto updateCmd = "update" % (
 			command("update").set(action, action_e::update),
@@ -180,6 +180,9 @@ namespace gdpm::package_manager{
 			command("fetch").set(action, action_e::fetch),
 			option(values("remote", params.args)) % "remote to fetch asset data"
 		);
+		auto versionCmd = "show the version and exit" %(
+			command("version").set(action, action_e::version)
+		);
 		auto add_arg = [&params](string arg) { params.args.emplace_back(arg); };
 		auto remoteCmd = (
 			command("remote").set(action, action_e::remote_list).if_missing(
@@ -208,10 +211,10 @@ namespace gdpm::package_manager{
 		);
 
 		auto cli = (
-			debugOpt, configOpt, verboseOpt, versionOpt,
+			debugOpt, verboseOpt, configOpt,
 			(installCmd | addCmd | removeCmd | updateCmd | searchCmd | exportCmd |
 			listCmd | linkCmd | cloneCmd | cleanCmd | configCmd | fetchCmd |
-			remoteCmd | uiCmd | helpCmd)
+			remoteCmd | uiCmd | helpCmd | versionCmd)
 		);
 
 		/* Make help output */

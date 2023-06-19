@@ -213,11 +213,11 @@ namespace gdpm::utils{
 	
 	bool prompt_user_yn(const char *message){
 		std::string input{""};
-		while( !std::cin.fail() && input != "y" && input != "n" ){
-			bool is_default = (input == "\0" || input == "\n" || input == "\r\n" || input.empty());
+		while( input != "y" && input != "n" ){
 			input = to_lower(utils::prompt_user(message));
+			bool is_default = (input == "\0" || input == "\n" || input == "\r\n" || input.empty());
 			input = is_default ? "y" : input;
-		} 
+		}
 		return input == "y";
 	}
 
