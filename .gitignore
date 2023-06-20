@@ -3,7 +3,9 @@ builds/**
 bin/gdpm
 bin/gdpm.static
 bin/gdpm.tests
-docs/doxygen
+docs/doxygen/html
+docs/doxygen/latex
+docs/doxygen/man
 cache/**
 tests/*
 !tests/*.cpp
