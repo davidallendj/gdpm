@@ -121,83 +121,81 @@ namespace gdpm::package_manager{
 
 		auto installCmd = "install" % (
 			command("install").set(action, action_e::install),
-			packageValues % "packages to install from asset library",
+			packageValues % "package(s) to install from asset library",
 			godotVersionOpt, cleanOpt, parallelOpt, syncOpt, skipOpt, remoteOpt, fileOpt
 		);
 		auto addCmd = "add" % (
 			command("add").set(action, action_e::add),
-			packageValues % "package(s) to add to local project", 
+			packageValues % "package(s) to add to project", 
 			parallelOpt, skipOpt, remoteOpt, fileOpt
 		);
 		auto removeCmd = "remove" % (
 			command("remove").set(action, action_e::remove),
-			packageValues % "package(s) to remove from local project",
+			packageValues % "packages(s) to remove from project",
 			fileOpt
 		);
-		auto updateCmd = "update" % (
+		auto updateCmd = "update package(s)" % (
 			command("update").set(action, action_e::update),
-			packageValues % "update package(s)"
+			packageValues % ""
 		);
-		auto searchCmd = "search" % (
+		auto searchCmd = "search for package(s)" % (
 			command("search").set(action, action_e::search),
-			packageValues % "package(s) to search for"
+			packageValues % ""
 		);
-		auto exportCmd = "export" % (
+		auto exportCmd = "export installed package list to file" % (
 			command("export").set(action, action_e::p_export),
-			values("paths", params.args) % "export installed package list to file"
+			values("paths", params.args) % ""
 		);
 		auto listCmd = "show installed packages" % (
 			command("list").set(action, action_e::list)
 		);
-		auto linkCmd = "link" % (
+		auto linkCmd = "create link from package to project" % (
 			command("link").set(action, action_e::link),
-			value("package", package_titles) % "package name to link",
-			value("path", params.args) % "path to project"
+			value("package", package_titles) % "",
+			value("path", params.args) % ""
 		);
-		auto cloneCmd = "clone" % (
+		auto cloneCmd = "clone package to project" % (
 			command("clone").set(action, action_e::clone),
-			value("package", package_titles) % "packages to clone",
-			value("path", params.args) % "path to project"
+			value("package", package_titles) % "",
+			value("path", params.args) % ""
 		);
-		auto cleanCmd = "clean" % (
+		auto cleanCmd = "clean temporary download files" % (
 			command("clean").set(action, action_e::clean),
-			values("packages", package_titles) % "package temporary files to remove"
+			values("packages", package_titles) % ""
 		);
-		auto configCmd = "get/set config properties" % (
-			command("config").set(action, action_e::config_get),
+		auto configCmd = "manage config properties" % (
+			command("config").set(action, action_e::config_get) ,
 			(
 				( greedy(command("get")).set(action, action_e::config_get),
-				  option(repeatable(values("properties", params.args))) % "get config properties"
-				)
+				  option(repeatable(values("properties", params.args)))
+				) % "get config properties"
 				| 
-				( command("set").set(action, action_e::config_set), 
-				  value("property", params.args[1]).call([]{}) % "config property",
-				  value("value", params.args[2]).call([]{}) % "config value"
-				)
+				( command("set").set(action, action_e::config_set) , 
+				  value("property", params.args[1]).call([]{}),
+				  value("value", params.args[2]).call([]{})
+				) % "set config properties"
 			)
 		);
-		auto fetchCmd = "fetch" % (
+		auto fetchCmd = "fetch asset data from remote" % (
 			command("fetch").set(action, action_e::fetch),
-			option(values("remote", params.args)) % "remote to fetch asset data"
+			option(values("remote", params.args)) % ""
 		);
 		auto versionCmd = "show the version and exit" %(
 			command("version").set(action, action_e::version)
 		);
 		auto add_arg = [&params](string arg) { params.args.emplace_back(arg); };
-		auto remoteCmd = (
+		auto remoteCmd = "manage remote sources" % (
 			command("remote").set(action, action_e::remote_list).if_missing(
-				[]{
-					remote::print_repositories(config);
-				}
+				[]{ remote::print_repositories(config); }
 			),
 			( 
-				"add a remote source" % ( command("add").set(action, action_e::remote_add),
-					word("name").call(add_arg) % "remote name", 
-					value("url").call(add_arg) % "remote URL"
+				"add" % ( command("add").set(action, action_e::remote_add),
+					word("name").call(add_arg) % "", 
+					value("url").call(add_arg) % ""
 				)
 				| 
 				"remove a remote source" % ( command("remove").set(action, action_e::remote_remove),
-					words("names", params.args) % "remote name(s)"
+					words("names", params.args) % ""
 				)
 				|
 				"list remote sources" % ( command("list").set(action, action_e::remote_list))
