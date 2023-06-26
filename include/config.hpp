@@ -27,6 +27,7 @@ namespace gdpm::config{
 		string_map remote_sources;
 		size_t jobs					= 1;
 		size_t timeout				= 3000;
+		size_t max_results			= 200;
 		bool enable_sync			= true;
 		bool enable_cache			= true;
 		bool skip_prompt			= false;

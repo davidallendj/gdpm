@@ -17,10 +17,12 @@
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 
+
+typedef long curl_off_t;
 namespace gdpm::utils {
 
 	using namespace std::chrono_literals;
-
+	// extern indicators::DynamicProgress<indicators::ProgressBar> bars;
 	struct memory_buffer{
 		char *addr = nullptr;
 		size_t size = 0;
@@ -35,31 +37,6 @@ namespace gdpm::utils {
 
 	static void free_buffer(memory_buffer& buf){
 		free(buf.addr);
-	}
-
-	static size_t curl_write_to_buffer(char *contents, size_t size, size_t nmemb, void *userdata){
-
-		size_t realsize = size * nmemb;
-		struct memory_buffer *m = (struct memory_buffer*)userdata;
-
-		m->addr = (char*)realloc(m->addr, m->size + realsize + 1);
-		if(m->addr == nullptr){
-			/* Out of memory */
-			fprintf(stderr, "Not enough memory (realloc returned NULL)\n");
-			return 0;
-		}
-
-		memcpy(&(m->addr[m->size]), contents, realsize);
-		m->size += realsize;
-		m->addr[m->size] = 0;
-
-		return realsize;
-	}
-
-	static size_t curl_write_to_stream(char *ptr, size_t size, size_t nmemb, void *userdata){
-		if(nmemb == 0)
-			return 0;
-		return fwrite(ptr, size, nmemb, (FILE*)userdata);
 	}
 
 	/* Use ISO 8601 for default timestamp format. */
@@ -94,7 +71,8 @@ namespace gdpm::utils {
 		std::move(part, from.end(), std::back_inserter(from));
 		from.erase(part);
 	}
-	
+
+	std::vector<std::string> split_lines(const std::string& contents);
 	std::string readfile(const std::string& path);
 	std::string to_lower(const std::string& s);
 	std::string trim(const std::string& s);
@@ -111,8 +89,14 @@ namespace gdpm::utils {
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
 	std::string join(const std::vector<std::string>& target, const std::string& delimiter = ", ");
 	std::string join(const std::unordered_map<std::string, std::string>& target, const std::string& prefix = "", const std::string& delimiter = "\n");
+	std::string convert_size(long size);
 	// TODO: Add function to get size of decompressed zip
 
+	namespace curl {
+		extern size_t write_to_buffer(char *contents, size_t size, size_t nmemb, void *userdata);
+		extern size_t write_to_stream(char *ptr, size_t size, size_t nmemb, void *userdata);
+		extern int show_progress(void *ptr, curl_off_t total_download, curl_off_t current_downloaded, curl_off_t total_upload, curl_off_t current_upload);
+	}
 	namespace json {
 		std::string from_array(const std::set<std::string>& a, const std::string& prefix);
 		std::string from_object(const std::unordered_map<std::string, std::string>& m, const std::string& prefix, const std::string& spaces);

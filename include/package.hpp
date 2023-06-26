@@ -90,21 +90,21 @@ namespace gdpm::package {
 
 	To copy the package to a project instead of linking, use the `--clone` option.
 
-	`gdpm install --clone "super cool examle package"
+	`gdpm install --clone "super cool example package"
 
 	*/
-	GDPM_DLL_EXPORT error install(const config::context& config, const title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT error install(const config::context& config, title_list& package_titles, const params& params = package::params());
 	/*!
 	@brief Adds package to project locally only.
 	@param config
 	@param package_titles
 	@param params 
 	*/
-	GDPM_DLL_EXPORT error add(const config::context& config, const title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT error add(const config::context& config, title_list& package_titles, const params& params = package::params());
 	/*!
 	@brief Remove's package and contents from local database.
 	*/
-	GDPM_DLL_EXPORT error remove(const config::context& config, const title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT error remove(const config::context& config, title_list& package_titles, const params& params = package::params());
 	GDPM_DLL_EXPORT error remove_all(const config::context& config, const params& params = package::params());
 	GDPM_DLL_EXPORT error update(const config::context& config, const title_list& package_titles, const params& params = package::params());
 	GDPM_DLL_EXPORT error search(const config::context& config, const title_list& package_titles, const params& params = package::params());

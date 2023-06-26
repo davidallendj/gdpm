@@ -4,3 +4,12 @@
 [submodule "modules/doxygen-awesome-css"]
 	path = modules/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css/
+[submodule "submodules/indicators"]
+	path = submodules/indicators
+	url = https://github.com/p-ranav/indicators
+[submodule "modules/tabulate"]
+	path = modules/tabulate
+	url = https://github.com/p-ranav/tabulate
+[submodule "modules/csv2"]
+	path = modules/csv2
+	url = https://github.com/p-ranav/csv2

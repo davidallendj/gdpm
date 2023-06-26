@@ -14,7 +14,6 @@
 #include <curlpp/Easy.hpp>
 #include <curlpp/Options.hpp>
 #include <curlpp/Exception.hpp>
-
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
@@ -22,6 +21,7 @@ namespace gdpm::rest_api{
 		request_params params 	= make_request_params();
 		params.godot_version 	= (is_latest) ? "" : config.info.godot_version;
 		params.verbose 			= config.verbose;
+		params.max_results 		= config.max_results;
 		return params;
 	}
 
@@ -166,9 +166,10 @@ namespace gdpm::rest_api{
 		type_e type, 
 		int verbose
 	){
+		http::context http;
 		string request_url{url};
 		request_url += to_string(type);
-		http::response r = http::request_get(url);
+		http::response r = http.request_get(url);
 		if(verbose > 0)
 			log::info("URL: {}", url);
 		return _parse_json(r.body);
@@ -208,8 +209,14 @@ namespace gdpm::rest_api{
 		const string& url, 
 		const request_params& c
 	){
+		http::context http;
+		http::request_params http_params;
+		http_params.headers.insert(http::header("Accept", "*/*"));
+		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Connection", "keep-alive"));
 		string request_url = _prepare_request(url, c);
-		http::response r = http::request_get(request_url);
+		http::response r = http.request_get(request_url, http_params);
 		if(c.verbose > 0)
 			log::info("get_asset().URL: {}", request_url);
 		return _parse_json(r.body, c.verbose);
@@ -218,11 +225,19 @@ namespace gdpm::rest_api{
 	rapidjson::Document get_asset(
 		const string& url, 
 		int asset_id, 
-		const request_params& params
+		const rest_api::request_params& api_params
 	){
-		string request_url = utils::replace_all(_prepare_request(url, params), "{id}", std::to_string(asset_id));
-		http::response r = http::request_get(request_url.c_str());
-		if(params.verbose >= log::INFO)
+		/* Set up HTTP request */
+		http::context http;
+		http::request_params http_params;
+		http_params.headers.insert(http::header("Accept", "*/*"));
+		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Connection", "keep-alive"));
+
+		string request_url = utils::replace_all(_prepare_request(url, api_params), "{id}", std::to_string(asset_id));
+		http::response r = http.request_get(request_url.c_str(), http_params);
+		if(api_params.verbose >= log::INFO)
 			log::info("get_asset().URL: {}", request_url);
 		
 		return _parse_json(r.body);

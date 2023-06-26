@@ -80,7 +80,7 @@ function build_exe(){
 
 function build_libs(){
 	mkdir -p build
-	$CMAKE_COMMAND \\
+	$CMAKE_COMMAND \
 		--target gdpm-static \
 		--target gdpm-shared \
 		--target gdpm-http \

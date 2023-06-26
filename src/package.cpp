@@ -20,7 +20,7 @@ namespace gdpm::package{
 	
 	error install(
 		const config::context& config,
-		const package::title_list& package_titles, 
+		package::title_list& package_titles, 
 		const package::params& params
 	){
 		using namespace rapidjson;
@@ -38,6 +38,20 @@ namespace gdpm::package{
 
 		*/
 
+		/* Append files from --file option */
+		if(!params.input_files.empty()){
+			log::print("input files");
+			for(const auto& filepath : params.input_files){
+				string contents = utils::readfile(filepath);
+				log::print("contents: {}", contents);
+				string_list input_titles = utils::split_lines(contents);
+				package_titles.insert(
+					std::end(package_titles),
+					std::begin(input_titles),
+					std::end(input_titles)
+				);
+			}
+		}
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_found = {};
 		package::info_list p_cache = result.unwrap_unsafe();
@@ -50,6 +64,7 @@ namespace gdpm::package{
 				p_cache = result.unwrap_unsafe();
 			}
 		}
+
 
 		/* Match queried package titles with those found in cache. */
 		log::debug("Searching for packages in cache...");
@@ -68,10 +83,13 @@ namespace gdpm::package{
 
 		/* If size of package_titles == p_found, then all packages can be installed
 		from cache and there's no need to query remote API. However, this will
-		only installed the latest *local* version and will not sync with remote. */
-		if(p_found.size() == package_titles.size()){
-			log::info("Found all packages stored in local cache.");
-		}
+		only installed the latest *local* version and will not sync with remote. 
+		
+		FIXME: This needs to also check if it is installed as well.
+		*/
+		// if(p_found.size() == package_titles.size()){
+		// 	log::info("Found all packages stored in local cache.");
+		// }
 
 		/* Found nothing to install so there's nothing to do at this point. */
 		if(p_found.empty()){
@@ -165,8 +183,9 @@ namespace gdpm::package{
 			}
 			else{
 				/* Download all the package files and place them in tmp directory. */
-				log::info("Downloading \"{}\"...", p.title);
-				http::response response = http::download_file(p.download_url, tmp_zip);
+				log::info_n("Downloading \"{}\"...", p.title);
+				http::context http;
+				http::response response = http.download_file(p.download_url, tmp_zip);
 				if(response.code == http::OK){
 					log::println("Done.");
 				}else{
@@ -185,8 +204,9 @@ namespace gdpm::package{
 			p.install_path = package_dir;
 
 			/* Extract all the downloaded packages to their appropriate directory location. */
-			for(const auto& p : dir_pairs)
-				utils::extract_zip(p.first.c_str(), p.second.c_str());
+			for(const auto& p : dir_pairs){
+				int error_code = utils::extract_zip(p.first.c_str(), p.second.c_str());
+			}
 
 			/* Update the cache data with information from  */
 			log::info_n("Updating local asset data...");
@@ -195,6 +215,9 @@ namespace gdpm::package{
 				string prefix = std::format(log::get_error_prefix(), utils::timestamp());
 				log::println(GDPM_COLOR_LOG_ERROR"\n{}{}" GDPM_COLOR_RESET, prefix, error.get_message());
 				return error;
+			}
+			if(config.clean_temporary){
+				clean_temporary(config, package_titles);
 			}
 
 			log::println("Done.");
@@ -208,7 +231,7 @@ namespace gdpm::package{
 
 	error add(
 		const config::context& config,
-		const title_list& package_titles,
+		title_list& package_titles,
 		const params& params
 	){
 		/* Install packages in local project instead of package database.
@@ -219,15 +242,29 @@ namespace gdpm::package{
 
 	error remove(
 		const config::context& config,
-		const string_list& package_titles, 
+		string_list& package_titles, 
 		const package::params& params
 	){
 		using namespace rapidjson;
 		using namespace std::filesystem;
 
+
+		/* Append package titles from --file option */
+		if(!params.input_files.empty()){
+			for(const auto& filepath : params.input_files){
+				string contents = utils::readfile(filepath);
+				string_list _package_titles = utils::split_lines(contents);
+				package_titles.insert(
+					std::end(package_titles),
+					std::begin(_package_titles),
+					std::end(_package_titles)
+				);
+			}
+		}
+
 		/* Find the packages to remove if they're is_installed and show them to the user */
 		result_t result = cache::get_package_info_by_title(package_titles);
-		std::vector<package::info> p_cache = result.unwrap_unsafe();
+		package::info_list p_cache = result.unwrap_unsafe();
 		if(p_cache.empty()){
 			error error(
 				constants::error::NOT_FOUND,
@@ -246,7 +283,7 @@ namespace gdpm::package{
 		if(p_count == 0){
 			error error(
 				constants::error::NOT_FOUND,
-				"\nNo packages to remove."
+				"No packages to remove."
 			);
 			log::error(error);
 			return error;
@@ -259,7 +296,7 @@ namespace gdpm::package{
 		log::println("");
 		
 		if(!config.skip_prompt){
-			if(!utils::prompt_user_yn("Do you want to remove these packages? (y/n)"))
+			if(!utils::prompt_user_yn("Do you want to remove these packages? (Y/n)"))
 				return error();
 		}
 
@@ -299,6 +336,9 @@ namespace gdpm::package{
 			p.is_installed = false;
 		}
 		log::println("Done.");
+		if(config.clean_temporary){
+			clean_temporary(config, package_titles);
+		}
 		log::info_n("Updating local asset data...");
 		{
 			error error = cache::update_package_info(p_cache);
@@ -392,6 +432,7 @@ namespace gdpm::package{
 	){
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
 		info_list p_cache = r_cache.unwrap_unsafe();
+		http::context http;
 		
 		if(!p_cache.empty() && !config.enable_sync){
 			print_list(p_cache);
@@ -401,11 +442,8 @@ namespace gdpm::package{
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		for(const auto& p_title : package_titles){
 			using namespace rapidjson;
-		
-			rest_api_params.filter = http::url_escape(p_title);
-			rest_api_params.verbose = config.verbose;
-			rest_api_params.godot_version = config.info.godot_version;
-			rest_api_params.max_results = 200;
+
+			rest_api_params.filter = http.url_escape(p_title);
 
 			std::string request_url{constants::HostUrl};
 			request_url += rest_api::endpoints::GET_Asset;
@@ -471,13 +509,17 @@ namespace gdpm::package{
 
 		/* Write contents of installed packages in reusable format */
 		for(const auto& path : paths ){
-			std::ofstream of(path);
 			if(std::filesystem::exists(path)){
-				constexpr const char *message = "File or directory exists!";
-				log::error(message);
-				of.close();
-				return error(constants::error::FILE_EXISTS, message);
+				if(utils::prompt_user_yn("File or directory exists. Do you want to overwrite it?")){
+
+				}
+				else {
+					constexpr const char *message = "File or directory exists!";
+					log::error(message);
+					return error(constants::error::FILE_EXISTS, message);
+				}
 			}
+			std::ofstream of(path);
 			log::println("writing contents to file");
 			of << output;
 			of.close();

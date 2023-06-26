@@ -1,6 +1,6 @@
 # Godot Package Manager (GDPM)
 
-https://ody.sh/B5vPxVhNTr
+[Demo](https://ody.sh/B5vPxVhNTr)
 
 GDPM is an attempt to make a simple, front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different platforms. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. It stores "packages" in a global directories and is capable of linking or copying global packages to local projects.
 
@@ -161,20 +161,20 @@ Other installation behavior can be changed with additional flags. Adding the `-y
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
-gdpm install -f packages.txt --config config.json --no-sync --no-prompt --verbose
+gdpm install -f packages.txt --config config.json --no-sync --skip-prompt --verbose
 
 gdpm export path/to/packages.txt
-gdpm install -f path/to/packages.txt --no-sync --no-prompt
+gdpm install -f path/to/packages.txt --no-sync --skip-prompt
 
 # Future work for multithreading support...
-# gdpm install -f path/to/packages.txt -j$(nproc) --no-sync --no-prompt --verbose
+# gdpm install -f path/to/packages.txt -j$(nproc) --no-sync --skip-prompt --verbose
 ```
 
 Packages can be removed similiarly to installing.
 
 ```bash
 gdpm remove "Flappy Godot" "GodotNetworking" -y
-gdpm remove -f packages.txt --config config.json --no-sync --no-prompt
+gdpm remove -f packages.txt --config config.json --no-sync --skip-prompt
 ```
 
 Packages can be updated simliar installing or removing packages. However, if no argument is passed, GDPM will prompt the user to update ALL packages to latest instead. The local metadata database can be updated using the `sync` command. (Note: The `sync` command will be changed to the `fetch` command to reflect `git`'s API.)
@@ -264,6 +264,8 @@ export PATH=$PATH:path/to/bin/gdpm
 ## Known Issues
 
 *   The `help` command does currently print the command/options correctly. Commands do not use the double hypen, `--command` format. Commands should be used like `gdpm command --option` instead.
+
+*   Some asset types might not install correctly due to partial downloads being interrupted. Try running `gdpm clean <package>`, then install again.
 
 ## License
 

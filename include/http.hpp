@@ -3,9 +3,12 @@
 #include "constants.hpp"
 #include "types.hpp"
 #include <unordered_map>
+#include <curl/curl.h>
+#include <curl/easy.h>
 
 namespace gdpm::http{
 	using headers_t = std::unordered_map<string, string>;
+	using header = std::pair<string, string>;
 
 	// REF: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 	enum response_code{
@@ -88,9 +91,25 @@ namespace gdpm::http{
 		int verbose = 0;
 	};
 
-	string url_escape(const string& url);
-	response request_get(const string& url, const http::request_params& params = http::request_params());
-	response request_post(const string& url, const http::request_params& params = http::request_params());
-	response download_file(const string& url, const string& storage_path, const http::request_params& params = http::request_params());
+	class context : public non_copyable{
+	public:
+		context();
+		~context();
+
+		inline CURL* const get_curl() const;
+		string url_escape(const string& url);
+		response request_get(const string& url, const http::request_params& params = http::request_params());
+		response request_post(const string& url, const http::request_params& params = http::request_params());
+		response download_file(const string& url, const string& storage_path, const http::request_params& params = http::request_params());
+		long get_download_size(const string& url);
+		long get_bytes_downloaded(const string& url);
 	
+	private:
+		CURL *curl;
+		curl_slist* _add_headers(CURL *curl, const headers_t& headers);
+	};
+
+	
+
+	extern context http;
 }

@@ -3,6 +3,11 @@
 #include "config.hpp"
 #include "constants.hpp"
 #include "log.hpp"
+#include "indicators/indeterminate_progress_bar.hpp"
+#include "indicators/dynamic_progress.hpp"
+#include "indicators/progress_bar.hpp"
+#include "indicators/block_progress_bar.hpp"
+#include "csv2/reader.hpp"
 
 
 #include <asm-generic/errno-base.h>
@@ -21,8 +26,55 @@
 #include <thread>
 #include <unordered_map>
 #include <zip.h>
+#include <curl/curl.h>
 
 namespace gdpm::utils{
+
+	using namespace indicators;
+	BlockProgressBar bar {
+		option::BarWidth{50},
+		// option::Start{"["},
+		// option::Fill{"="},
+		// option::Lead{">"},
+		// option::Remainder{" "},
+		// option::End{"]"},
+		option::PrefixText{"Downloading file "},
+		option::PostfixText{""},
+		option::ForegroundColor{Color::green},
+		option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+	};
+		// option::ShowElapsedTime{true},
+		// option::ShowRemainingTime{true},
+	IndeterminateProgressBar bar_unknown {
+		option::BarWidth{50},
+		option::Start{"["},
+		option::Fill{"."},
+		option::Lead{"<==>"},
+		option::PrefixText{"Downloading file "},
+		option::End{"]"},
+		option::PostfixText{""},
+		option::ForegroundColor{Color::green},
+		option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+	};
+
+	std::vector<std::string> split_lines(const std::string& contents){
+		using namespace csv2;
+		csv2::Reader<
+			delimiter<'\n'>,
+			quote_character<'"'>,
+			first_row_is_header<false>,
+			trim_policy::trim_whitespace
+		> csv;
+		std::vector<std::string> lines;
+		if(csv.parse(contents)){
+			for(const auto& row : csv){
+				for(const auto& cell : row){
+					lines.emplace_back(cell.read_view());
+				}
+			}
+		}
+		return lines;
+	}
 
 	
 	#if (GDPM_READFILE_IMPL == 0)
@@ -142,7 +194,8 @@ namespace gdpm::utils{
 		int i, len, fd;
 		zip_uint64_t sum;	
 
-		log::info_n("Extracting package contents to '{}'...", dest);
+		// log::info_n("Extracting package contents to '{}'...", dest);
+		log::info_n("Extracting package contents...");
 		if((za = zip_open(archive, 0, &err)) == nullptr){
 			zip_error_to_str(buf, sizeof(buf), err, errno);
 			log::error("{}: can't open zip archive {}: {}", prog, archive, buf);
@@ -263,8 +316,104 @@ namespace gdpm::utils{
 		return o;
 	}
 
-	namespace json {
+	std::string convert_size(long size){
+		int digit = 0;
+		while(size > 1000){
+			size /= 1000;
+			digit += 1;
+		}
+		std::string s = std::to_string(size);
+		switch(digit){
+			case 0: return s + " B";
+			case 1: return s + " KB";
+			case 2: return s + " MB";
+			case 3: return s + " GB";
+			case 4: return s + " TB";
+			case 5: return s + " PB";
+		}
+		return std::to_string(size);
+	}
 
+
+	namespace curl {
+		size_t write_to_buffer(
+			char *contents, 
+			size_t size, 
+			size_t nmemb, 
+			void *userdata
+		){
+			size_t realsize = size * nmemb;
+			struct memory_buffer *m = (struct memory_buffer*)userdata;
+
+			m->addr = (char*)realloc(m->addr, m->size + realsize + 1);
+			if(m->addr == nullptr){
+				/* Out of memory */
+				fprintf(stderr, "Not enough memory (realloc returned NULL)\n");
+				return 0;
+			}
+
+			memcpy(&(m->addr[m->size]), contents, realsize);
+			m->size += realsize;
+			m->addr[m->size] = 0;
+
+			return realsize;
+		}
+
+		size_t write_to_stream(
+			char *ptr, 
+			size_t size, 
+			size_t nmemb, 
+			void *userdata
+		){
+			if(nmemb == 0)
+				return 0;
+						
+			return fwrite(ptr, size, nmemb, (FILE*)userdata);
+		}
+
+		int show_progress(
+			void *ptr,
+			curl_off_t total_download,
+			curl_off_t current_downloaded,
+			curl_off_t total_upload,
+			curl_off_t current_upload
+		){
+
+			if(current_downloaded >= total_download)
+				return 0;
+			using namespace indicators;
+			show_console_cursor(false);
+			if(total_download != 0){
+				// double percent = std::floor((current_downloaded / (total_download)) * 100);
+				bar.set_option(option::MaxProgress{total_download});
+				bar.set_progress(current_downloaded);
+				bar.set_option(option::PostfixText{
+						convert_size(current_downloaded) + " / " + 
+						convert_size(total_download)
+				});
+				if(bar.is_completed()){
+					bar.set_option(option::PrefixText{"Download completed."});
+					bar.mark_as_completed();
+				}
+			} else {
+				if(bar_unknown.is_completed()){
+					bar.set_option(option::PrefixText{"Download completed."});
+					bar.mark_as_completed();
+				} else {
+					bar.tick();
+					bar_unknown.set_option(
+						option::PostfixText(std::format("{}", convert_size(current_downloaded)))
+					);
+
+				}
+			}
+			show_console_cursor(true);
+			memory_buffer *m = (memory_buffer*)ptr;
+			return 0;
+		}
+	}
+
+	namespace json {
 		std::string from_array(
 			const std::set<std::string>& a, 
 			const std::string& prefix

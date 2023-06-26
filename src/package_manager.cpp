@@ -108,7 +108,8 @@ namespace gdpm::package_manager{
 		auto verboseOpt 				= joinable(repeatable(option("-v", "--verbose").call([]{ config.verbose += 1; }))) % "show verbose output";	
 
 		/* Set the options */
-		auto fileOpt 			= repeatable(option("--file", "-f").set(params.args)  % "read file as input");
+		// auto fileOpt 			= repeatable(option("--file", "-f").set(params.input_files)  % "read file as input");
+		auto fileOpt 				= repeatable(option("--file", "-f") & values("input", params.input_files)) % "read file as input";
 		auto cleanOpt 			= option("--clean").set(config.clean_temporary) % "enable/disable cleaning temps";
 		auto parallelOpt 		= option("--jobs").set(config.jobs) % "set number of parallel jobs";
 		auto cacheOpt 			= option("--enable-cache").set(config.enable_cache) % "enable/disable local caching";
@@ -132,7 +133,7 @@ namespace gdpm::package_manager{
 		auto removeCmd = "remove" % (
 			command("remove").set(action, action_e::remove),
 			packageValues % "packages(s) to remove from project",
-			fileOpt
+			fileOpt, skipOpt, cleanOpt
 		);
 		auto updateCmd = "update package(s)" % (
 			command("update").set(action, action_e::update),
@@ -140,7 +141,8 @@ namespace gdpm::package_manager{
 		);
 		auto searchCmd = "search for package(s)" % (
 			command("search").set(action, action_e::search),
-			packageValues % ""
+			packageValues % "",
+			godotVersionOpt, fileOpt, remoteOpt, configOpt
 		);
 		auto exportCmd = "export installed package list to file" % (
 			command("export").set(action, action_e::p_export),
