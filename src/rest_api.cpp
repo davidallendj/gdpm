@@ -17,7 +17,7 @@
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
-		return config.api_params;
+		return config.rest_api_params;
 	}
 
 	request_params make_request_params(
