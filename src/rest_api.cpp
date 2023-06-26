@@ -17,12 +17,7 @@
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
-		bool is_latest = (config.info.godot_version.empty() || config.info.godot_version == "latest");
-		request_params params 	= make_request_params();
-		params.godot_version 	= (is_latest) ? "" : config.info.godot_version;
-		params.verbose 			= config.verbose;
-		params.max_results 		= config.max_results;
-		return params;
+		return config.api_params;
 	}
 
 	request_params make_request_params(

@@ -98,10 +98,10 @@ namespace gdpm::package_manager{
 		auto configOpt 			= option("--config-path").set(config.path) % "set config path";
 		auto pathOpt				= option("--path").set(params.paths) % "specify a path to use with command";
 		auto typeOpt 			= option("--type").set(config.info.type) % "set package type (any|addon|project)";
-		auto sortOpt 			= option("--sort").set(config.api_params.sort) % "sort packages in order (rating|cost|name|updated)";
-		auto supportOpt 			= option("--support").set(config.api_params.support) % "set the support level for API (all|official|community|testing)";
-		auto maxResultsOpt 		= option("--max-results").set(config.api_params.max_results) % "set the request max results";
-		auto godotVersionOpt 	= option("--godot-version").set(config.api_params.godot_version) % "set the request Godot version";
+		auto sortOpt 			= option("--sort").set(config.rest_api_params.sort) % "sort packages in order (rating|cost|name|updated)";
+		auto supportOpt 			= option("--support").set(config.rest_api_params.support) % "set the support level for API (all|official|community|testing)";
+		auto maxResultsOpt 		= option("--max-results").set(config.rest_api_params.max_results) % "set the request max results";
+		auto godotVersionOpt 	= option("--godot-version").set(config.rest_api_params.godot_version) % "set the request Godot version";
 		auto packageDirOpt		= option("--package-dir").set(config.packages_dir) % "set the global package location";
 		auto tmpDirOpt			= option("--tmp-dir").set(config.tmp_dir) % "set the temporary download location";
 		auto timeoutOpt			= option("--timeout").set(config.timeout) % "set the request timeout";
