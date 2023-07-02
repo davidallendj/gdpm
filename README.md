@@ -1,6 +1,7 @@
 # Godot Package Manager (GDPM)
 
-[Demo](https://ody.sh/B5vPxVhNTr)
+[demo.webm](https://github.com/davidallendj/gdpm/assets/16520934/6aa82627-3be6-43e3-b7c7-8a38af20591c)
+
 
 GDPM is an attempt to make a simple, front-end, command-line, package manager designed to handle assets from the Godot Game Engine's official asset library. It is written in C++ to be lightwight and fast with a few common dependencies found in most Linux distributions and can be used completely independent of Godot. It is designed to add more functionality not included with the official AssetLib with the ability to automate downloads for different platforms. So far, the package manager is capable of searching, downloading, installing, and removing packages and makes managing Godot assets across multiple projects much easier. It stores "packages" in a global directories and is capable of linking or copying global packages to local projects.
 
