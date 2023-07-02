@@ -18,6 +18,13 @@ namespace gdpm::constants{
 	constexpr std::string WHITESPACE = " \n\r\t\f\v";
 }
 
+namespace gdpm::print{
+	enum class style{
+		list = 0,
+		table = 1,
+	};
+}
+
 /* Define default macros to set when building with -DGPM_* */
 #define GDPM_CONFIG_USERNAME ""
 #define GDPM_CONFIG_PASSWORD ""

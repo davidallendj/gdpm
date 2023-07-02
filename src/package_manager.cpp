@@ -241,11 +241,14 @@ namespace gdpm::package_manager{
 		search_command.add_argument("--support")
 			.help("set the support level")
 			.nargs(1);
-
 		search_command.add_argument("-f", "--file")
 			.help("set the file(s) to read as input")
 			.append()
 			.nargs(nargs_pattern::at_least_one);
+		search_command.add_argument("--style")
+			.help("set how to print output")
+			.nargs(1)
+			.default_value("list");
 		
 		ui_command.add_description("show user interface (WIP)");
 		version_command.add_description("show version and exit");
@@ -422,6 +425,13 @@ namespace gdpm::package_manager{
 			set_if_used(search_command, config.rest_api_params.godot_version, "godot-version");
 			set_if_used(search_command, params.remote_source, "remote");
 			set_if_used(search_command, params.input_files, "file");
+			if(search_command.is_used("style")){
+				string style = search_command.get<string>("style");
+				if(!style.compare("list"))
+					config.style = print::style::list;
+				else if(!style.compare("table"))
+					config.style = print::style::table;
+			}
 		}
 		else if(program.is_subcommand_used(export_command)){
 			action = action_e::p_export;
@@ -434,9 +444,9 @@ namespace gdpm::package_manager{
 			if(list_command.is_used("style")){
 				string style = list_command.get<string>("style");
 				if(!style.compare("list"))
-					config.style = config::print_style::list;
+					config.style = print::style::list;
 				else if(!style.compare("table"))
-					config.style = config::print_style::table;
+					config.style = print::style::table;
 			}
 		}
 		else if(program.is_subcommand_used(link_command)){
@@ -469,9 +479,9 @@ namespace gdpm::package_manager{
 			if(config_command.is_used("style")){
 				string style = config_command.get<string>("style");
 				if(!style.compare("list"))
-					config.style = config::print_style::list;
+					config.style = print::style::list;
 				else if(!style.compare("table"))
-					config.style = config::print_style::table;
+					config.style = print::style::table;
 			}
 			if(config_command.is_subcommand_used(config_get)){
 				action = action_e::config_get;
@@ -480,9 +490,9 @@ namespace gdpm::package_manager{
 				if(config_get.is_used("style")){
 					string style = config_get.get<string>("style");
 					if(!style.compare("list"))
-						config.style = config::print_style::list;
+						config.style = print::style::list;
 					else if(!style.compare("table"))
-						config.style = config::print_style::table;
+						config.style = print::style::table;
 				}
 			}
 			else if(config_command.is_subcommand_used(config_set)){
@@ -521,9 +531,9 @@ namespace gdpm::package_manager{
 				action = action_e::remote_list;
 				string style = remote_list.get<string>("style");
 				if(!style.compare("list"))
-					config.style = config::print_style::list;
+					config.style = print::style::list;
 				else if(!style.compare("table"))
-					config.style = config::print_style::table;
+					config.style = print::style::table;
 			}
 		}
 		else if(program.is_subcommand_used("ui")){

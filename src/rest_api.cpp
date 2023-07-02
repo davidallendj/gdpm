@@ -1,5 +1,7 @@
 
 #include "config.hpp"
+#include "error.hpp"
+#include "package.hpp"
 #include "rest_api.hpp"
 #include "constants.hpp"
 #include "http.hpp"
@@ -23,31 +25,6 @@ namespace gdpm::rest_api{
 		return rp;
 	}
 
-	request_params make_request_params(
-		type_e 			type, 
-		int 			category, 
-		support_e 		support, 
-		const string& 	user, 
-		const string& 	godot_version, 
-		int 			max_results, 
-		int 			page, 
-		sort_e 			sort, 
-		bool 			reverse, 
-		int 			verbose
-	){
-		return request_params{
-			.type 			= type,
-			.category 		= category,
-			.support 		= support,
-			.user 			= user,
-			.godot_version 	= godot_version,
-			.max_results 	= max_results,
-			.page 			= page,
-			.sort 			= sort,
-			.reverse 		= reverse,
-			.verbose 		= verbose
-		};
-	}
 
 	bool register_account(
 		const string& username, 
@@ -124,23 +101,25 @@ namespace gdpm::rest_api{
 
 	string _prepare_request(
 		const string& url, 
-		const request_params &c,
+		const request_params& c,
 		const string& filter
 	){
 		string request_url{url};
-		request_url += to_string(static_cast<type_e>(c.type));
-		request_url += (c.category <= 0) ? "&category=" : "&category="+std::to_string(c.category);
-		request_url += "&" + to_string(static_cast<support_e>(c.support));
-		request_url += "&" + to_string(static_cast<sort_e>(c.sort));
+		request_url += to_string(static_cast<type_e>(std::clamp(c.type, 0, 2)));
+		request_url += (c.category <= 0) ? "" : "&category="+std::to_string(c.category);
+		request_url += "&" + to_string(static_cast<support_e>(std::clamp(c.support, 0, 3)));
+		request_url += (c.sort <= 0) ? "" : "&" + to_string(static_cast<sort_e>(std::clamp(c.sort, 1, 4)));
 		request_url += (!filter.empty()) ? "&filter="+filter : "";
+		request_url += (!c.user.empty()) ? "&user="+c.user : "";
+		request_url += (!c.cost.empty()) ? "&cost="+c.cost : "";
 		request_url += (!c.godot_version.empty()) ? "&godot_version="+c.godot_version : "";
-		request_url += "&max_results=" + std::to_string(c.max_results);
-		request_url += "&page=" + std::to_string(c.page);
+		request_url += (c.max_results <= 0 || c.max_results > 500) ? "" : "&max_results=" + std::to_string(c.max_results);
+		request_url += (c.page <= 0) ? "" : "&page=" + std::to_string(c.page);
 		request_url += (c.reverse) ? "&reverse" : "";
 		return request_url;
 	}
 
-	void _print_params(const request_params& params, const string& filter){
+	error print_params(const request_params& params, const string& filter){
 		log::println("params: \n"
 			"\ttype: {}\n"
 			"\tcategory: {}\n"
@@ -155,6 +134,28 @@ namespace gdpm::rest_api{
 			params.godot_version,
 			params.max_results
 		);
+		return error();
+	}
+
+	error print_asset(
+		const rest_api::request_params& rest_api_params,
+		const string& filter,
+		const print::style& style
+	){
+		using namespace rapidjson;
+			string request_url{constants::HostUrl + rest_api::endpoints::GET_Asset};
+			Document doc = rest_api::get_assets_list(request_url, rest_api_params);
+			if(doc.IsNull()){
+				return log::error_rc(error(
+					constants::error::HOST_UNREACHABLE,
+					"Could not fetch metadata. Aborting."
+				));
+			}
+		if(style == print::style::list)
+			package::print_list(doc);
+		if(style == print::style::table)
+			package::print_table(doc);
+		return error();
 	}
 
 	rapidjson::Document configure(
@@ -171,34 +172,6 @@ namespace gdpm::rest_api{
 		return _parse_json(r.body);
 	}
 
-	rapidjson::Document get_assets_list(
-		const string& url, 
-		type_e type, 
-		int category, 
-		support_e support, 
-		const string& filter,
-		const string& user, 
-		const string& godot_version, 
-		int max_results, 
-		int page, 
-		sort_e sort, 
-		bool reverse, 
-		int verbose
-	){
-		request_params c{
-			.type 			= type,
-			.category 		= category,
-			.support 		= support,
-			.user 			= user,
-			.godot_version 	= godot_version,
-			.max_results 	= max_results,
-			.page 			= page,
-			.sort 			= sort,
-			.reverse 		= reverse,
-			.verbose 		= verbose
-		};
-		return get_assets_list(url, c);
-	}
 
 	rapidjson::Document get_assets_list(
 		const string& url, 
@@ -207,14 +180,14 @@ namespace gdpm::rest_api{
 	){
 		http::context http;
 		http::request_params http_params;
-		// http_params.headers.insert(http::header("Accept", "*/*"));
-		// http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		// http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		// http_params.headers.insert(http::header("Connection", "keep-alive"));
+		http_params.headers.insert(http::header("Accept", "*/*"));
+		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Connection", "keep-alive"));
 		string request_url = _prepare_request(url, c, http.url_escape(filter));
 		http::response r = http.request_get(request_url, http_params);
 		if(c.verbose >= log::INFO)
-			log::info("get_asset().URL: {}", request_url);
+			log::info("rest_api::get_asset_list()::URL: {}", request_url);
 		return _parse_json(r.body, c.verbose);
 	}
 
@@ -228,10 +201,10 @@ namespace gdpm::rest_api{
 		/* Set up HTTP request */
 		http::context http;
 		http::request_params http_params;
-		// http_params.headers.insert(http::header("Accept", "*/*"));
-		// http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		// http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		// http_params.headers.insert(http::header("Connection", "keep-alive"));
+		http_params.headers.insert(http::header("Accept", "*/*"));
+		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		http_params.headers.insert(http::header("Connection", "keep-alive"));
 		string request_url = utils::replace_all(_prepare_request(url, api_params, http.url_escape(filter)), "{id}", std::to_string(asset_id));
 		http::response r = http.request_get(request_url.c_str(), http_params);
 		if(api_params.verbose >= log::INFO)

@@ -406,6 +406,8 @@ namespace gdpm::package{
 		return error();
 	}
 
+	
+
 
 	error search(
 		const config::context& config,
@@ -420,18 +422,19 @@ namespace gdpm::package{
 			return error();
 		}
 
+		/* Do a generic query with no filter */
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
+		if(package_titles.empty()){
+			return print_asset(rest_api_params);
+		}
+
+		/* Query each package title supplied as input */
 		for(const auto& p_title : package_titles){
-			using namespace rapidjson;
-			string request_url{constants::HostUrl + rest_api::endpoints::GET_Asset};
-			Document doc = rest_api::get_assets_list(request_url, rest_api_params, p_title);
-			if(doc.IsNull()){
-				return log::error_rc(error(
-					constants::error::HOST_UNREACHABLE,
-					"Could not fetch metadata. Aborting."
-				));
+			error error = print_asset(rest_api_params, p_title, config.style);
+			if(error.has_occurred()){
+				log::error(error);
+				continue;
 			}
-			print_list(doc);
 		}
 		return error();
 	}
@@ -449,9 +452,9 @@ namespace gdpm::package{
 			result_t r_installed = cache::get_installed_packages();
 			info_list p_installed = r_installed.unwrap_unsafe();
 			if(!p_installed.empty()){
-				if(config.style == config::print_style::list)
+				if(config.style == print::style::list)
 					print_list(p_installed);
-				else if(config.style == config::print_style::table){
+				else if(config.style == print::style::table){
 					print_table(p_installed);
 				}
 			} 
@@ -699,6 +702,35 @@ namespace gdpm::package{
 				p.cost,
 				p.modify_date,
 				p.support_level
+			});
+		}
+		table.print(std::cout);
+	}
+
+
+	void print_table(const rapidjson::Document& json){
+		using namespace tabulate;
+		Table table;
+		table.add_row({
+			"Asset Name",
+			 "Author",
+			 "Category",
+			 "Version",
+			 "Godot Version",
+			 "License/Cost",
+			 "Last Modified",
+			 "Support"
+		});
+		for(const auto& o : json["result"].GetArray()){
+			table.add_row({
+				o["title"]			.GetString(), 
+				o["author"]			.GetString(),
+				o["category"]		.GetString(),
+				o["version_string"]	.GetString(),
+				o["godot_version"]	.GetString(),
+				o["cost"]			.GetString(),
+				o["modify_date"]	.GetString(),
+				o["support_level"]	.GetString()
 			});
 		}
 		table.print(std::cout);

@@ -344,8 +344,6 @@ gdpm config set username towk
 
 *   The code is currently changing so new issues will pop up often.
 
-*   Searching is broken.
-
 *   Logging doesn't write to file.
 
 ## License

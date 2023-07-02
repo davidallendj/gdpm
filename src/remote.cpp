@@ -63,12 +63,12 @@ namespace gdpm::remote{
 
 	void print_repositories(const config::context& config){
 		const auto &rs = config.remote_sources;
-		if(config.style == config::print_style::list){
+		if(config.style == print::style::list){
 			std::for_each(rs.begin(), rs.end(), [](const string_pair& p){
 				log::println("{}: {}", p.first, p.second);
 			});
 		}
-		else if(config.style == config::print_style::table){
+		else if(config.style == print::style::table){
 			using namespace tabulate;
 			Table table;
 			table.add_row({"Name", "URL"});

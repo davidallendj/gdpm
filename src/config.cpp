@@ -35,16 +35,16 @@
 namespace gdpm::config{
 	context config;
 
-	string from_style(const print_style& style){
-		if(style == print_style::list)			return "list";
-		else if(style == print_style::table) 	return "table";
+	string from_style(const print::style& style){
+		if(style == print::style::list)			return "list";
+		else if(style == print::style::table) 	return "table";
 		return "list";
 	}
 
-	print_style to_style(const string& s){
-		if(s == "list") 		return print_style::list;
-		else if(s == "table") 	return print_style::table;
-		else					return print_style::list;
+	print::style to_style(const string& s){
+		if(s == "list") 		return print::style::list;
+		else if(s == "table") 	return print::style::table;
+		else					return print::style::list;
 	}
 	
 	string to_json(
@@ -413,7 +413,7 @@ namespace gdpm::config{
 	){
 		using namespace tabulate;
 
-		if(config.style == config::print_style::list){
+		if(config.style == print::style::list){
 			if(properties.empty()){
 				_print_property(config, "username");
 				_print_property(config, "password");
@@ -442,7 +442,7 @@ namespace gdpm::config{
 				);
 			}
 		}
-		else if(config.style == config::print_style::table){
+		else if(config.style == print::style::table){
 			Table table;
 			table.add_row({"Property", "Value"});
 			if(properties.empty()){
