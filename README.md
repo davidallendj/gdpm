@@ -198,13 +198,13 @@ Installation behavior can be adjusted using other flags like `--disable-sync`, `
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
-gdpm install -f packages.txt --config config.json --no-sync --skip-prompt --verbose
+gdpm install -f packages.txt --config config.json --disable-sync --skip-prompt --verbose
 
 gdpm export path/to/packages.txt
 gdpm install -f path/to/packages.txt --disable-sync --skip-prompt
 
 # Future work for multithreading support...
-# gdpm install -f path/to/packages.txt -j$(nproc) --no-sync --skip-prompt --verbose
+# gdpm install -f path/to/packages.txt -j$(nproc) --disable-sync --skip-prompt --verbose
 ```
 
 Packages can be removed similiarly to installing.
@@ -238,13 +238,12 @@ Search for available packages using the `search` command. The results can be twe
 
 Use the `search` command to find a list of available packages. (Note: This currently will only search remotely for package information! This will be changed later to only search the local metadata instead.)
 ```bash
-gdpm search "GodotNetworking" \ 
+gdpm --verbose search "GodotNetworking" \ 
 	--sort updated \
 	--type project \
 	--max-results 50 \
 	--godot-version 3.4 \
-	--verbose \
-	--user towk \
+	--author godot \
 	--support official
 ```
 
@@ -253,9 +252,8 @@ gdpm search "GodotNetworking" \
 Link an installed package using the `link` command or make copy of it using `clone`.
 
 ```bash
-gdpm link "GodotNetworking" tests/test-godot-project
-gdpm link -f packages.txt tests/test-godot-project
-gdpm clone -f packages.txt tests/tests-godot-project/addons
+gdpm link GodotNetworking tests/test-godot-project
+gdpm clone GodotNetworking tests/tests-godot-project/addons
 
 # Future work
 # gdpm link --all    # links all installed packages to current directory

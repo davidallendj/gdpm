@@ -121,7 +121,7 @@ namespace gdpm::package {
 	GDPM_DLL_EXPORT result_t<title_list> get_package_titles(const info_list& packages);
 	GDPM_DLL_EXPORT void clean_temporary(const config::context& config, const title_list& package_titles);
 	GDPM_DLL_EXPORT params make_params(const var_args& args, const var_opts& opts);
-
+	GDPM_DLL_EXPORT void read_file(title_list& package_titles, const path_list& paths);
 	/* Dependency Management API */
 	GDPM_DLL_EXPORT result_t<info_list> synchronize_database(const config::context& config, const title_list& package_titles);
 	GDPM_DLL_EXPORT result_t<info_list> resolve_dependencies(const config::context& config, const title_list& package_titles);

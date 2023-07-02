@@ -40,18 +40,8 @@ namespace gdpm::package{
 		*/
 
 		/* Append files from --file option */
-		// if(!params.input_files.empty()){
-			for(const auto& filepath : params.input_files){
-				string contents = utils::readfile(filepath);
-				log::print("contents: {}", contents);
-				string_list input_titles = utils::split_lines(contents);
-				package_titles.insert(
-					std::end(package_titles),
-					std::begin(input_titles),
-					std::end(input_titles)
-				);
-			}
-		// }
+		read_file(package_titles, params.input_files);
+		
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_found = {};
 		package::info_list p_cache = result.unwrap_unsafe();
@@ -250,17 +240,7 @@ namespace gdpm::package{
 
 
 		/* Append package titles from --file option */
-		if(!params.input_files.empty()){
-			for(const auto& filepath : params.input_files){
-				string contents = utils::readfile(filepath);
-				string_list _package_titles = utils::split_lines(contents);
-				package_titles.insert(
-					std::end(package_titles),
-					std::begin(_package_titles),
-					std::end(_package_titles)
-				);
-			}
-		}
+		read_file(package_titles, params.input_files);
 
 		/* Find the packages to remove if they're is_installed and show them to the user */
 		result_t result = cache::get_package_info_by_title(package_titles);
@@ -563,19 +543,17 @@ namespace gdpm::package{
 		}
 
 		if(p_found.empty()){
-			error error(
+			return log::error_rc(error(
 				constants::error::NO_PACKAGE_FOUND,
 				"No packages found to link."
-			);
-			log::error(error);
-			return error;
+			));
 		}
 
 		/* Get the storage paths for all packages to create symlinks */
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
 			for(const auto& path : params.paths){
-				log::info_n("link: \"{}\" -> '{}'...", p.title, path + "/" + p.title);
+				log::println("link: \"{}\" -> '{}'...", p.title, path + "/" + p.title);
 				// std::filesystem::path target{config.packages_dir + "/" + p.title};
 				std::filesystem::path target = {current_path().string() + "/" + config.packages_dir + "/" + p.title};
 				std::filesystem::path symlink_path{path + "/" + p.title};
@@ -584,13 +562,11 @@ namespace gdpm::package{
 				std::error_code ec;
 				std::filesystem::create_directory_symlink(target, symlink_path, ec);
 				if(ec){
-					error error(
+					log::error(error(
 						constants::error::STD_ERR,
 						std::format("Could not create symlink: {}", ec.message())
-					);
-					log::error(error);
+					));
 				}
-				log::println("Done.");
 			}
 		}
 		return error();
@@ -645,15 +621,13 @@ namespace gdpm::package{
 		}
 
 		/* Get the storage paths for all packages to create clones */
-		path_refs paths = path_refs{params.args.back()};
 		// path_list paths = path_list({params.args.back()});
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
-			for(const auto& path : paths){
-				const string _path = string(path);
-				log::info("clone: \"{}\" -> {}", p.title, _path + "/" + p.title);
+			for(const auto& path : params.paths){
+				log::println("clone: \"{}\" -> {}", p.title, path + "/" + p.title);
 				std::filesystem::path from{config.packages_dir + "/" + p.title};
-				std::filesystem::path to{_path + "/" + p.title};
+				std::filesystem::path to{path + "/" + p.title};
 				if(!std::filesystem::exists(to.string()))
 					std::filesystem::create_directories(to); /* This should only occur if using a --force flag */
 
@@ -896,6 +870,21 @@ namespace gdpm::package{
 		}
 
 		return result_t(p_deps, error());
+	}
+
+	void read_file(
+		title_list& package_titles,
+		const path_list& paths
+	){
+		for(const auto& filepath : paths){
+			string contents = utils::readfile(filepath);
+			title_list input_titles = utils::split_lines(contents);
+			package_titles.insert(
+				std::end(package_titles),
+				std::begin(input_titles),
+				std::end(input_titles)
+			);
+		}
 	}
 
 	string to_json(

@@ -148,7 +148,7 @@ namespace gdpm::package_manager{
 		install_command.add_description("install package(s)");
 		install_command.add_argument("packages")
 			.required()
-			.nargs(nargs_pattern::at_least_one)
+			.nargs(nargs_pattern::any)
 			.help("packages to install");
 		install_command.add_argument("--godot-version")
 			.help("set Godot version for request");
@@ -205,7 +205,8 @@ namespace gdpm::package_manager{
 			.nargs(nargs_pattern::at_least_one);
 
 		remove_command.add_description("remove package(s)");
-		remove_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		remove_command.add_argument("packages")
+			.nargs(nargs_pattern::any);
 		remove_command.add_argument("--clean");
 		remove_command.add_argument("-y", "--skip-prompt");
 		remove_command.add_argument("-f", "--file")
@@ -214,7 +215,8 @@ namespace gdpm::package_manager{
 			.nargs(nargs_pattern::at_least_one);
 		
 		update_command.add_description("update package(s)");
-		update_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		update_command.add_argument("packages")
+			.nargs(nargs_pattern::any);
 		update_command.add_argument("--clean");
 		update_command.add_argument("--remote");
 		update_command.add_argument("-f", "--file")
@@ -223,9 +225,30 @@ namespace gdpm::package_manager{
 			.nargs(nargs_pattern::at_least_one);
 
 		search_command.add_description("search for package(s)");
-		search_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
-		search_command.add_argument("--godot-version");
-		search_command.add_argument("--remote");
+		search_command.add_argument("packages")
+			.nargs(nargs_pattern::any);
+		search_command.add_argument("--godot-version")
+			.help("set Godot version")
+			.nargs(1);
+		search_command.add_argument("--remote")
+			.help("set remote to use")
+			.nargs(1);
+		search_command.add_argument("--sort")
+			.help("sort the results")
+			.nargs(1);
+		search_command.add_argument("--type")
+			.help("set the asset type")
+			.nargs(1);
+		search_command.add_argument("--max-results")
+			.help("limit the results")
+			.nargs(1);
+		search_command.add_argument("--author")
+			.help("set the asset author")
+			.nargs(1);
+		search_command.add_argument("--support")
+			.help("set the support level")
+			.nargs(1);
+
 		search_command.add_argument("-f", "--file")
 			.help("set the file(s) to read as input")
 			.append()
@@ -254,21 +277,29 @@ namespace gdpm::package_manager{
 		link_command.add_description("link package(s) to path");
 		link_command.add_argument("packages")
 			.help("package(s) to link")
-			.required()
 			.nargs(1);
 		link_command.add_argument("path")
 			.help("path to link")
-			.required()
+			.nargs(1);
+		link_command.add_argument("-f", "--file")
+			.help("files to link")
+			.nargs(nargs_pattern::at_least_one);
+		link_command.add_argument("-p", "--path")
+			.help("set path to link")
 			.nargs(1);
 		
 		clone_command.add_description("clone package(s) to path");
 		clone_command.add_argument("packages")
 			.help("package(s) to clone")
-			.required()
 			.nargs(1);;
 		clone_command.add_argument("path")
 			.help("path to clone")
-			.required()
+			.nargs(1);
+		clone_command.add_argument("-f", "--file")
+			.help("file")
+			.nargs(nargs_pattern::at_least_one);
+		clone_command.add_argument("-p", "--path")
+			.help("set path to clone")
 			.nargs(1);
 		
 		clean_command.add_description("clean package(s) temporary files");
@@ -280,8 +311,7 @@ namespace gdpm::package_manager{
 		fetch_command.add_description("fetch and sync asset data");
 		fetch_command.add_argument("remote")
 			.help("remote to fetch")
-			.required()
-			.nargs(1);
+			.nargs(nargs_pattern::any);
 
 		config_get.add_argument("properties")
 			.help("get config properties")
@@ -379,7 +409,7 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(update_command)){
 			action = action_e::update;
-			package_titles = get_packages_from_parser(program);
+			package_titles = get_packages_from_parser(update_command);
 			set_if_used(update_command, config.clean_temporary, "clean");
 			set_if_used(update_command, params.remote_source, "remote");
 			set_if_used(update_command, params.input_files, "file");
@@ -397,7 +427,6 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(list_command)){
 			action = action_e::list;
-			// auto list = get_parser(program, "list");
 			if(list_command.is_used("show"))
 				params.args = list_command.get<string_list>("show");
 			if(list_command.is_used("style")){
@@ -412,11 +441,23 @@ namespace gdpm::package_manager{
 			action = action_e::link;
 			package_titles = get_packages_from_parser(link_command);
 			set_if_used(link_command, params.paths, "path");
+			if(link_command.is_used("file")){
+				params.input_files = link_command.get<string_list>("file");
+			}
+			if(link_command.is_used("path")){
+				params.paths = link_command.get<string_list>("path");
+			}
 		}
 		else if(program.is_subcommand_used(clone_command)){
 			action = action_e::clone;
 			package_titles = get_packages_from_parser(clone_command);
 			set_if_used(clone_command, params.paths, "path");
+			if(clone_command.is_used("file")){
+				params.input_files = clone_command.get<string_list>("file");
+			}
+			if(clone_command.is_used("path")){
+				params.paths = clone_command.get<string_list>("path");
+			}
 		}
 		else if(program.is_subcommand_used(clean_command)){
 			action = action_e::clean;
@@ -435,13 +476,11 @@ namespace gdpm::package_manager{
 				if(config_set.is_used("value"))
 					params.args.emplace_back(config_set.get<string>("value"));
 			}
-			// else{
-			// 	action = action_e::config_get;
-			// }
 		}
 		else if(program.is_subcommand_used(fetch_command)){
 			action = action_e::fetch;
-			params.remote_source = fetch_command.get("remote");
+			if(fetch_command.is_used("remote"))
+				params.remote_source = fetch_command.get("remote");
 		}
 		else if(program.is_subcommand_used(version_command)){
 			action = action_e::version;
