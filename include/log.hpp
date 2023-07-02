@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include "clipp.h"
 #include "utils.hpp"
 #include "colors.hpp"
 #include "types.hpp"
