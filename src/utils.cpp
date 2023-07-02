@@ -57,6 +57,10 @@ namespace gdpm::utils{
 		option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
 	};
 
+	bool to_bool(const std::string& s){
+		return to_lower(s) == "true";
+	}
+
 	std::vector<std::string> split_lines(const std::string& contents){
 		using namespace csv2;
 		csv2::Reader<

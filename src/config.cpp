@@ -232,32 +232,33 @@ namespace gdpm::config{
 		return error();
 	}
 
+
 	error set_property(
 		config::context& config,
 		const string& property,
-		const any& value
+		const string& value
 	){
-		log::println("config::set_property() called");
-		if(property == "username")					config.username 		= std::any_cast<string>(value);
-		else if(property == "password") 			config.password 		= std::any_cast<string>(value);
-		else if(property == "path")					config.path				= std::any_cast<string>(value);
-		else if(property == "token")				config.token			= std::any_cast<string>(value);
-		else if(property == "packages_dir")			config.packages_dir		= std::any_cast<string>(value);
-		else if(property == "tmp_dir")				config.tmp_dir			= std::any_cast<string>(value);
-		else if(property == "remote_sources")		config.remote_sources	= std::any_cast<string_map>(value);
-		else if(property == "jobs")					config.jobs				= std::any_cast<int>(value);
-		else if(property == "timeout")				config.timeout			= std::any_cast<int>(value);
-		else if(property == "enable_sync")			config.enable_sync		= std::any_cast<bool>(value);
-		else if(property == "enable_cache")			config.enable_cache		= std::any_cast<bool>(value);
-		else if(property == "skip_prompt")			config.skip_prompt		= std::any_cast<bool>(value);
-		else if(property == "enable_file_logging")	config.enable_file_logging		= std::any_cast<bool>(value);
-		else if(property == "clean_temporary")		config.clean_temporary	= std::any_cast<bool>(value);
+		if(property == "username")					config.username 		= value;
+		else if(property == "password") 			config.password 		= value;
+		else if(property == "path")					config.path				= value;
+		else if(property == "token")				config.token			= value;
+		else if(property == "packages-dir")			config.packages_dir		= value;
+		else if(property == "tmp-dir")				config.tmp_dir			= value;
+		else if(property == "remote-sources")		log::println("use 'gpdm remote' to manage remotes");
+		else if(property == "jobs")					config.jobs				= std::stoi(value);
+		else if(property == "timeout")				config.timeout			= std::stoi(value);
+		else if(property == "enable-sync")			config.enable_sync		= utils::to_bool(value);
+		else if(property == "enable-cache")			config.enable_cache		= utils::to_bool(value);
+		else if(property == "skip-prompt")			config.skip_prompt		= utils::to_bool(value);
+		else if(property == "enable-file-logging")	config.enable_file_logging	= utils::to_bool(value);
+		else if(property == "clean-temporary")		config.clean_temporary	= utils::to_bool(value);
 		else{
 			return log::error_rc(error(
 				constants::error::INVALID_CONFIG,
 				"Could not find property"
 			));
 		}
+		return error();
 	}
 
 	template <typename T>
@@ -342,14 +343,14 @@ namespace gdpm::config{
 		else if(property == "password") 		log::println("password: {}", config.password);
 		else if(property == "path") 			log::println("path: {}", config.path);
 		else if(property == "token") 			log::println("token: {}", config.token);
-		else if(property == "packages_dir") 	log::println("package directory: {}", config.packages_dir);
-		else if(property == "tmp_dir") 			log::println("temporary directory: {}", config.tmp_dir);
-		else if(property == "remote_sources") 	log::println("remote sources: \n{}", utils::join(config.remote_sources, "\t", "\n"));
+		else if(property == "packages-dir") 	log::println("package directory: {}", config.packages_dir);
+		else if(property == "tmp-dir") 			log::println("temporary directory: {}", config.tmp_dir);
+		else if(property == "remote-sources") 	log::println("remote sources: \n{}", utils::join(config.remote_sources, "\t", "\n"));
 		else if(property == "jobs") 			log::println("parallel jobs: {}", config.jobs);
 		else if(property == "timeout") 			log::println("timeout: {}", config.timeout);
 		else if(property == "sync") 			log::println("enable sync: {}", config.enable_sync);
 		else if(property == "cache") 			log::println("enable cache: {}", config.enable_cache);
-		else if(property == "prompt") 			log::println("skip prompt: {}", config.skip_prompt);
+		else if(property == "skip-prompt") 		log::println("skip prompt: {}", config.skip_prompt);
 		else if(property == "logging") 			log::println("enable file logging: {}", config.enable_file_logging);
 		else if(property == "clean") 			log::println("clean temporary files: {}", config.clean_temporary);
 		else if(property == "verbose") 			log::println("verbose: {}", config.verbose);
@@ -366,14 +367,14 @@ namespace gdpm::config{
 		else if(property == "password") 		table.add_row({"Password", config.password});
 		else if(property == "path") 			table.add_row({"Path", config.path});
 		else if(property == "token") 			table.add_row({"Token", config.token});
-		else if(property == "packages_dir") 	table.add_row({"Package Directory", config.packages_dir});
-		else if(property == "tmp_dir") 			table.add_row({"Temp Directory", config.tmp_dir});
-		else if(property == "remote_sources") 	table.add_row({"Remotes", utils::join(config.remote_sources, "\t", "\n")});
+		else if(property == "packages-dir") 	table.add_row({"Package Directory", config.packages_dir});
+		else if(property == "tmp-dir") 			table.add_row({"Temp Directory", config.tmp_dir});
+		else if(property == "remote-sources") 	table.add_row({"Remotes", utils::join(config.remote_sources, "\t", "\n")});
 		else if(property == "jobs") 			table.add_row({"Threads", std::to_string(config.jobs)});
 		else if(property == "timeout") 			table.add_row({"Timeout", std::to_string(config.timeout)});
 		else if(property == "sync") 			table.add_row({"Fetch Assets", std::to_string(config.enable_sync)});
 		else if(property == "cache") 			table.add_row({"Cache", std::to_string(config.enable_cache)});
-		else if(property == "prompt") 			table.add_row({"Skip Prompt", std::to_string(config.skip_prompt)});
+		else if(property == "skip-prompt") 		table.add_row({"Skip Prompt", std::to_string(config.skip_prompt)});
 		else if(property == "logging") 			table.add_row({"File Logging", std::to_string(config.enable_file_logging)});
 		else if(property == "clean") 			table.add_row({"Clean Temporary", std::to_string(config.clean_temporary)});
 		else if(property == "verbose") 			table.add_row({"Verbosity", std::to_string(config.verbose)});
@@ -391,9 +392,9 @@ namespace gdpm::config{
 				_print_property(config, "password");
 				_print_property(config, "path");
 				_print_property(config, "token");
-				_print_property(config, "packages_dir");
-				_print_property(config, "tmp_dir");
-				_print_property(config, "remote_sources");
+				_print_property(config, "packages-dir");
+				_print_property(config, "tmp-dir");
+				_print_property(config, "remote-sources");
 				_print_property(config, "jobs");
 				_print_property(config, "timeout");
 				_print_property(config, "sync");
@@ -415,8 +416,8 @@ namespace gdpm::config{
 		}
 		else if(config.style == config::print_style::table){
 			Table table;
+			table.add_row({"Property", "Value"});
 			if(properties.empty()){
-				table.add_row({"Property", "Value"});
 				table.add_row({"Username", config.username});
 				table.add_row({"Password", config.password});
 				table.add_row({"Path", config.path});

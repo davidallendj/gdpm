@@ -1,6 +1,5 @@
 #pragma once
 
-#include "clipp.h"
 #include <tuple>
 #include <functional>
 #include <type_traits>
@@ -76,6 +75,7 @@ namespace gdpm{
 		});
 		return sl;
 	}
+
 
 	inline opts_t unwrap(const var_opts& opts){
 		opts_t o;

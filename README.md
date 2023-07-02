@@ -20,6 +20,7 @@ GDPM is an attempt to make a simple, front-end, command-line, package manager de
 	-   [Linking and Cloning](#linking-and-cloning)
 	-   [Cleaning Temporary Files](#cleaning-temporary-files)
 	-   [Managing Remote Sources](#managing-remote-sources)
+	-   [Managing Configuration Properties](#managing-configuration-properties)
 -   [Planned Features](#planned-features)
 -   [Known Issues](#known-issues)
 -   [License](#license)
@@ -306,6 +307,18 @@ To try `gdpm` without installing it to your system, create a symlink to the buil
 ```bash
 ln -s path/to/build/gdpm path/to/bin/gdpm
 export PATH=$PATH:path/to/bin/gdpm
+```
+
+### Managing Configuration Properties
+
+Configuration properties can be viewed and set using the `gdpm config` command.
+
+```bash
+gdpm config get						# shows all config properties
+gdpm config get --style=table		# shows all config properties in table
+gdpm config get skip-prompt jobs	# shows config properties listed
+gdpm config set timeout 30			# set config property value
+gdpm config set username towk
 ```
 
 ## Planned Features

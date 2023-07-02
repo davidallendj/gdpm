@@ -48,7 +48,7 @@ namespace gdpm::config{
 	error load(std::filesystem::path path, context& config);
 	error save(std::filesystem::path path, const context& config);
 	error handle_config(config::context& config, const args_t& args, const var_opts& opts);
-	error set_property(config::context& config, const string& property, const any& value);
+	error set_property(config::context& config, const string& property, const string& value);
 	template <typename T = any>
 	T& get_property(const config::context& config, const string& property);
 	context make_context(const string& username = GDPM_CONFIG_USERNAME, const string& password = GDPM_CONFIG_PASSWORD, const string& path = GDPM_CONFIG_PATH, const string& token = GDPM_CONFIG_TOKEN, const string& godot_version = GDPM_CONFIG_GODOT_VERSION, const string& packages_dir = GDPM_CONFIG_LOCAL_PACKAGES_DIR, const string& tmp_dir = GDPM_CONFIG_LOCAL_TMP_DIR, const string_map& remote_sources = {GDPM_CONFIG_REMOTE_SOURCES}, int jobs = GDPM_CONFIG_THREADS, int timeout = 0, bool enable_sync = GDPM_CONFIG_ENABLE_SYNC, bool enable_file_logging = GDPM_CONFIG_ENABLE_FILE_LOGGING, int verbose = GDPM_CONFIG_VERBOSE);

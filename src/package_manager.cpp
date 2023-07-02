@@ -93,7 +93,7 @@ namespace gdpm::package_manager{
 		}
 	};
 
-	string_list get_packages_from_parser(
+	string_list get_values_from_parser(
 		const argparse::ArgumentParser& cmd,
 		const std::string& arg = "packages"
 	){
@@ -313,10 +313,17 @@ namespace gdpm::package_manager{
 			.help("remote to fetch")
 			.nargs(nargs_pattern::any);
 
+		config_get.add_description("get config properties");
 		config_get.add_argument("properties")
 			.help("get config properties")
 			.nargs(nargs_pattern::any);
-		config_get.add_description("get config properties");
+		config_get.add_argument("--style")
+			.help("set how to print output")
+				.nargs(1)
+				.default_value("list");
+		
+		
+		config_set.add_description("set config property");
 		config_set.add_argument("property")
 			.help("property name")
 			.required()
@@ -325,11 +332,14 @@ namespace gdpm::package_manager{
 			.help("property value")
 			.required()
 			.nargs(1);
-		config_set.add_description("set config property");
 
 		config_command.add_description("manage config properties");
 		config_command.add_subparser(config_get);
 		config_command.add_subparser(config_set);
+		config_command.add_argument("--style")
+			.help("set how to print output")
+			.nargs(1)
+			.default_value("list");
 
 		remote_add.add_argument("name")
 			.help("remote name")
@@ -394,7 +404,7 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(add_command)){
 			action = action_e::add;
-			package_titles = get_packages_from_parser(add_command);
+			package_titles = get_values_from_parser(add_command);
 			set_if_used(add_command, params.remote_source, "remote");
 			set_if_used(add_command, config.jobs, "jobs");
 			set_if_used(add_command, config.skip_prompt, "skip-prompt");
@@ -402,21 +412,21 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(remove_command)){
 			action = action_e::remove;
-			package_titles = get_packages_from_parser(remove_command);
+			package_titles = get_values_from_parser(remove_command);
 			set_if_used(remove_command, config.clean_temporary, "clean");
 			set_if_used(remove_command, config.skip_prompt, "skip-prompt");
 			set_if_used(remove_command, params.input_files, "file");
 		}
 		else if(program.is_subcommand_used(update_command)){
 			action = action_e::update;
-			package_titles = get_packages_from_parser(update_command);
+			package_titles = get_values_from_parser(update_command);
 			set_if_used(update_command, config.clean_temporary, "clean");
 			set_if_used(update_command, params.remote_source, "remote");
 			set_if_used(update_command, params.input_files, "file");
 		}
 		else if(program.is_subcommand_used(search_command)){
 			action = action_e::search;
-			package_titles = get_packages_from_parser(search_command);
+			package_titles = get_values_from_parser(search_command);
 			set_if_used(search_command, config.rest_api_params.godot_version, "godot-version");
 			set_if_used(search_command, params.remote_source, "remote");
 			set_if_used(search_command, params.input_files, "file");
@@ -439,7 +449,7 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(link_command)){
 			action = action_e::link;
-			package_titles = get_packages_from_parser(link_command);
+			package_titles = get_values_from_parser(link_command);
 			set_if_used(link_command, params.paths, "path");
 			if(link_command.is_used("file")){
 				params.input_files = link_command.get<string_list>("file");
@@ -450,7 +460,7 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(clone_command)){
 			action = action_e::clone;
-			package_titles = get_packages_from_parser(clone_command);
+			package_titles = get_values_from_parser(clone_command);
 			set_if_used(clone_command, params.paths, "path");
 			if(clone_command.is_used("file")){
 				params.input_files = clone_command.get<string_list>("file");
@@ -461,13 +471,27 @@ namespace gdpm::package_manager{
 		}
 		else if(program.is_subcommand_used(clean_command)){
 			action = action_e::clean;
-			package_titles = get_packages_from_parser(clean_command);
+			package_titles = get_values_from_parser(clean_command);
 		}
 		else if(program.is_subcommand_used(config_command)){
+			if(config_command.is_used("style")){
+				string style = config_command.get<string>("style");
+				if(!style.compare("list"))
+					config.style = config::print_style::list;
+				else if(!style.compare("table"))
+					config.style = config::print_style::table;
+			}
 			if(config_command.is_subcommand_used(config_get)){
 				action = action_e::config_get;
 				if(config_get.is_used("properties"))
 					params.args = config_get.get<string_list>("properties");
+				if(config_get.is_used("style")){
+					string style = config_get.get<string>("style");
+					if(!style.compare("list"))
+						config.style = config::print_style::list;
+					else if(!style.compare("table"))
+						config.style = config::print_style::table;
+				}
 			}
 			else if(config_command.is_subcommand_used(config_set)){
 				action = action_e::config_set;

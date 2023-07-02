@@ -72,6 +72,7 @@ namespace gdpm::utils {
 		from.erase(part);
 	}
 
+	bool to_bool(const std::string& s);
 	std::vector<std::string> split_lines(const std::string& contents);
 	std::string readfile(const std::string& path);
 	std::string to_lower(const std::string& s);
