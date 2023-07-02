@@ -6,39 +6,23 @@ GDPM is an attempt to make a simple, front-end, command-line, package manager de
 
 \*GDPM has not been tested for Windows or Mac.
 
-[Quick Start](##quick-start)
-
-[Rational](##rationale)
-
-[How It Works](##how-it-works)
-
-[Features](##features)
-
-[Building from Source](##building-from-source)
-
-[Prerequisites](###prerequisites)
-
-[Macro Definitions](###macro-definitions)
-
-[API Documentation](###api-documentation)
-
-[How to use the CLI](##how-to-use-the-cli)
-
-[Installing, Removing, Updating, and Listing](###installing-removing-updating-and-listing)
-
-[Searching](###searching)
-
-[Linking and Cloning](###linking-and-cloning)
-
-[Cleaning Temporary Files](###cleaning-temporary-files)
-
-[Managing Remote Sources](###managing-remote-sources)
-
-[Planned Features](##planned-features)
-
-[Known Issues](##known-issues)
-
-[License](##license)
+-   [Quick Start](##quick-start)
+-   [Rational](##rationale)
+-   [How It Works](##how-it-works)
+-   [Features](##features)
+-   [Building from Source](##building-from-source)
+	-   [Prerequisites](###prerequisites)
+	-   [Macro Definitions](###macro-definitions)
+	-   [API Documentation](###api-documentation)
+-   [How to use the CLI](##how-to-use-the-cli)
+	-   [Installing, Removing, Updating, and Listing](###installing-removing-updating-and-listing)
+	-   [Searching](###searching)
+	-   [Linking and Cloning](###linking-and-cloning)
+	-   [Cleaning Temporary Files](###cleaning-temporary-files)
+	-   [Managing Remote Sources](###managing-remote-sources)
+-   [Planned Features](##planned-features)
+-   [Known Issues](##known-issues)
+-   [License](##license)
 
 
 
