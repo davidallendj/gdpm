@@ -6,7 +6,49 @@ GDPM is an attempt to make a simple, front-end, command-line, package manager de
 
 \*GDPM has not been tested for Windows or Mac.
 
-## Why not just use the Asset Library?
+## Quick Start
+
+Common commands for searching, installing, listing, and removing assets.
+
+```bash
+gdpm search demo
+gdpm install "Third Person Controller" --skip-prompt
+gdpm list --style=table
+gdpm remove "Third Person Controller" --clean
+```
+
+Use `gdpm help` to see full list of commands.
+
+```bash
+$ gdpm help
+Usage: gdpm [--help] [--verbose] {add,clean,clone,config,export,fetch,help,install,link,list,remote,remove,search,ui,update,version}
+
+Manage Godot engine assets from CLI
+
+Optional arguments:
+  -h, --help    shows help message and exits 
+  -v, --verbose set verbosity level 
+
+Subcommands:
+  add           add package to project
+  clean         clean package(s) temporary files
+  clone         clone package(s) to path
+  config        manage config properties
+  export        export install package(s) list
+  fetch         fetch and sync asset data
+  help          show help message and exit
+  install       install package(s)
+  link          link package(s) to path
+  list          show install package(s) and remotes
+  remote        manage remote(s)
+  remove        remove package(s)
+  search        search for package(s)
+  ui            show user interface (WIP)
+  update        update package(s)
+  version       show version and exit
+```
+
+## Rationale
 
 The AssetLib actually works well enough for most use cases. However, it's fairly common to download the same asset multiple times for different projects. If there isn't a need to modify the asset itself, it makes more sense to download the asset *once and only once*. That way, there will only be one global, read-only copy of the asset that is accessable and it can be linked to more than one project. The AssetLib does not have a built-in way to manage assets like this, and therefore requires redownloading assets for each new project. Additionally, the AssetLib is integrated into the engine itself with no command-line interface to manage assets. When downloading multiple assets, it is much more convenient to be able to automate the downloads using a list from a text file. If the user knows, which assets to download, they can make a list and point to it.
 
@@ -26,11 +68,13 @@ The local database stores all the information sent by the Asset API with additio
 
 *   Download and install packages from Godot's official AssetLib or from custom repositories. (Note: Multithread download support planned.)
 
-*   Stores downloads in single global location to use across multiple Godot projects using symlinks.
+*   Stores downloads in single global location to use across multiple Godot projects using symlinks, thus reducing space and bandwidth.
 
 *   Copy packages into a Godot project to make modifications when needed.
 
 *   Automate installing packages in scripts.
+
+*   Export list of installed packages to reinstall later.
 
 ## Building from Source
 
@@ -50,15 +94,13 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 *   fmt (may be removed later in favor of C++20 std::format)
 
-*   doctest (optional; for tests, but still WIP)
-
-*   clipp (header only)
-
 *   SQLite 3
+
+*   doctest (optional; for tests, but still WIP)
 
 *   Doxygen (optional; to generate API docs)
 
-After installing all necessary dependencies, build the project with the following commands:
+After installing all necessary dependencies, build the project::
 
 ```bash
 # Start by cloning the repo, then...
@@ -78,7 +120,8 @@ cmake ..
 make -j$(nproc)
 
 # Easy build using predefined `compile` script
-${project_root}/bin/compile.sh
+${project_root}/bin/compile.sh --all
+
 
 # ...build using MinGW on Windows ???
 # ...build using MSVC on Windows ??? 
@@ -89,40 +132,42 @@ Alternatively, run the `compile.sh` script to build with CMake:
 
 ```bash
 ${project_root}/bin/compile.sh \
-    --all \        # compiles all executables and libraries
-    --docs \       # generate the API documentation
-    --link \       # create symlinks from executables to the `bin` directory
-    --strip \      # strip symbols from binaries (same as running `strip` command)
+	--all \			# compiles all executables and libraries
+	--exe \			# compiles executables with shared library
+	--libs \		# compiles shared and static libraries
+	--docs \		# generate the API documentation
+	--link \		# create symlinks from executables to the `bin` directory
+	--strip \		# strip symbols from binaries (same as running `strip` command)
 ```
 
 Some macros can be set to enable/disable features or configure defaults by setting the C++ arguments in Meson. These values are used at compile time and a description of each value is provided below.
 
-```bash
-cpp_args = [
-    ...
-    '-DGDPM_LOG_LEVEL=2',
-    '-DGDPM_REQUEST_DELAY=200ms',
-    '-DGDPM_ENABLE_COLORS=1',
-    '-DGDPM_ENABLE_TIMESTAMPS=1'
-    ...
-]
-```
-
-Similarly, this can be done in CMake:
-
 ```cmake
 if(MSVC)
-    add_compile_defintions(
-        # Add flags specific to MSVC here...
-    )
+	add_compile_defintions(
+		# Add flags specific to MSVC here...
+	)
 else()
-    add_compile_definitions(
-        -DGDPM_LOG_LEVEL=2
-        -DGDPM_REQUEST_DELAY=200ms
-        -DGDPM_ENABLE_COLOR=1
-        -DGDPM_ENABLE_TIMESTAMP=1
-    )
+	add_compile_definitions(
+		-DGDPM_LOG_LEVEL=2
+		-DGDPM_REQUEST_DELAY=200ms
+		-DGDPM_ENABLE_COLOR=1
+		-DGDPM_ENABLE_TIMESTAMP=1
+	)
 endif()
+```
+
+Similarly, this can be done in Meson:
+
+```bash
+cpp_args = [
+	...
+	'-DGDPM_LOG_LEVEL=2',
+	'-DGDPM_REQUEST_DELAY=200ms',
+	'-DGDPM_ENABLE_COLORS=1',
+	'-DGDPM_ENABLE_TIMESTAMPS=1'
+	...
+]
 ```
 
 ### Macro Definitions
@@ -137,34 +182,26 @@ endif()
 
 ### API Documentation
 
-There is now support for generating API documentation with `doxygen` for the project. Simply run the command in the root directory of the project or with the `compile.sh` script and documentation will be generated in the `docs/doxygen/` directory. View it by opening the `html/index.html` file in a browser.
+There is support for generating API documentation with `doxygen` for the project. Simply run the command in the root directory of the project or with the `compile.sh` script and documentation will be generated in the `docs/doxygen/` directory. View it by opening the `html/index.html` file in a browser.
 
 NOTE: The API documentation is still a work-in-progress. Over time, the code base will be updated to generate the important parts of the source code.
 
-## How to Use
+## How to use the CLI
 
-GDPM takes a single command such as `install`, `remove`, `search`, `remote`, `update` `list`, or `help` followed by a list of arguments. The command specified is ran then the program exits reporting any errors that may occur. Each command can be modified by specifying additional optional parameters such as `--file` to read in a file for input or `--max-results` to limit the number of returned results from a search.&#x20;
+The `gdpm` command takes a single subcommand argument such as `install`, `remove`, `search`, `remote`, `update` `list`, or `help` followed by other arguments. See the `gdpm help` command for usage and full list of subcommands.
 
-```bash
-gdpm [COMMAND] [OPTIONS...]
-```
+### Installing, Removing, Updating, and Listing
 
-To see more help information:
+Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command.
 
-```bash
-gdpm help
-```
-
-Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `--file` option. Additionally, a package list can be exported to reinstall packages using the `export` command.&#x20;
-
-Other installation behavior can be changed with additional flags. Adding the `-y` flag will skip the user prompt. Adding `--no-sync` option with bypass syncing the local package database with the AssetLib API and use locally stored metadata only. Adding the `--verbose` flag will some more output. Use the `search` command to find a list of available packages. (Note: This currently will only search remotely for package information! This will be changed later to only search the local metadata instead.)
+Installation behavior can be adjusted using other flags like `--disable-sync`, `--disable-cache`, `-y/--skip-prompt`, or `--clean`.
 
 ```bash
 gdpm install "Flappy Godot" "GodotNetworking" -y
 gdpm install -f packages.txt --config config.json --no-sync --skip-prompt --verbose
 
 gdpm export path/to/packages.txt
-gdpm install -f path/to/packages.txt --no-sync --skip-prompt
+gdpm install -f path/to/packages.txt --disable-sync --skip-prompt
 
 # Future work for multithreading support...
 # gdpm install -f path/to/packages.txt -j$(nproc) --no-sync --skip-prompt --verbose
@@ -173,70 +210,78 @@ gdpm install -f path/to/packages.txt --no-sync --skip-prompt
 Packages can be removed similiarly to installing.
 
 ```bash
-gdpm remove "Flappy Godot" "GodotNetworking" -y
-gdpm remove -f packages.txt --config config.json --no-sync --skip-prompt
+gdpm remove "Flappy Godot" GodotNetworking -y
+gdpm remove -f packages.txt --config config.json --disable-sync --skip-prompt
 ```
 
-Packages can be updated simliar installing or removing packages. However, if no argument is passed, GDPM will prompt the user to update ALL packages to latest instead. The local metadata database can be updated using the `sync` command. (Note: The `sync` command will be changed to the `fetch` command to reflect `git`'s API.)
+Update packages by either specific packages or update everything installed at once. The local asset data with automatically be updated as well. 
 
 ```bash
-gdpm update "GodotNetworking"
+gdpm update GodotNetworking
 gdpm update -f packages.txt
-gdpm update    # Updates all packages
-gdpm sync      # Updates metadata
+gdpm update						# Updates everything installed
+gdpm fetch						# Updates local asset data
 ```
 
-To print a list installed packages, use the 'list' command. This also provides some other extra information like the Godot version and license. You can also list the remote sources using the 'remote' option. Alternatively, a list of remotes can be printed using the `remote` command alone.
+Print a list installed packages using the `list` command. This also provides some other extra information like the Godot version and license. You can also list the remote sources using the 'remote' option. Alternatively, a list of remotes can be printed using the `remote` command alone.
 
 ```bash
-gdpm list
-gdpm list packages      # Equivalent to `gdpm list`
-gdpm list remote        # Equivalent to `gdpm remote`
-gdpm remote            
+gdpm list --style=table
+gdpm list packages				# Equivalent to `gdpm list`
+gdpm list remote				# Equivalent to `gdpm remote`
+gdpm remote list --style=table	# Equivalent to `gdpm list`
 ```
 
-Packages can be linked or copied into a project using the 'link' and 'clone' commands. Specify which packages to link or clone then a path to link/clone it to. (Note: Listing no path will be changed to link/clone packages to the current directory.)
+### Searching
+
+Search for available packages using the `search` command. The results can be tweaked using a variety of options like `--sort` or `--support` as supported parameters by the Asset Library API. See the '--help' command for more details.
+
+Use the `search` command to find a list of available packages. (Note: This currently will only search remotely for package information! This will be changed later to only search the local metadata instead.)
+```bash
+gdpm search "GodotNetworking" \ 
+	--sort updated \
+	--type project \
+	--max-results 50 \
+	--godot-version 3.4 \
+	--verbose \
+	--user towk \
+	--support official
+```
+
+### Linking and Cloning
+
+Link an installed package using the `link` command or make copy of it using `clone`.
 
 ```bash
-gdpm link "GodotNetworking" --path tests/test-godot-project
-gdpm link -f packages.txt --path tests/test-godot-project
-gdpm clone -f packages.txt --path tests/tests-godot-project/addons
+gdpm link "GodotNetworking" tests/test-godot-project
+gdpm link -f packages.txt tests/test-godot-project
+gdpm clone -f packages.txt tests/tests-godot-project/addons
 
 # Future work
 # gdpm link --all    # links all installed packages to current directory
 # gdpm clone --all   # similar to the command above
 ```
 
-Temporary files downloaded from remote repositories can be cleaned by using the clean command or the `--clean` flag after installing  or removing packages. Cleaning is recommended if space is limited, but keeping the files stored reduces the number of remote requests needed to rebuild the local metadata database.
+### Cleaning Temporary Files
 
-Specifying packages will only clean those from temporary storage. Otherwise, no arguments will clean all temporary storage.
+Temporary files downloaded from remote repositories can be cleaned by using the `gdpm clean` command or the `--clean` flag after installing or removing packages. Cleaning is recommended if space is limited, but keeping the files stored reduces the number of remote requests needed to synchronize the local asset database with the Asset library.
 
 ```bash
-gdpm install -f packages.txt --clean -y
-gdpm remove -f packages.txt --clean -y
-gdpm clean "GodotNetworking"
-gdpm clean
+gdpm install -f packages.txt --clean -y		# install and discard temps
+gdpm remove -f packages.txt --clean -y		# remove and delete temps
+gdpm clean "GodotNetworking"				# clean for one package
+gdpm clean									# clean all packages
 ```
+
+### Managing Remote Sources
 
 Remote repositories can be added and removed similar to using `git`. Be aware that this API is still being changed and may not always work as expected.
 
 ```bash
 gdpm remote add official https://custom-assetlib/asset-library/api
-gdpm remote remove https://custom-assetlib/asset-library/api
+gdpm remote remove official
 ```
 
-Search for available packages using the `search` command. The results can be tweaked using a variety of options like '--sort' or '--support' as supported parameters by the Asset Library API. See the '--help' command for more details.
-
-```bash
-gdpm search "GodotNetworking" \ 
-    --sort updated \
-    --type project \
-    --max-results 50 \
-    --godot-version 3.4 \
-    --verbose \
-    --user towk \
-    --support official
-```
 
 To try `gdpm` without installing it to your system, create a symlink to the built executable and add the `bin` directory to your PATH variable.
 
@@ -246,6 +291,8 @@ export PATH=$PATH:path/to/bin/gdpm
 ```
 
 ## Planned Features
+
+*   [ ] Godot 4 Asset Library compatibility.
 
 *   [ ] Multithreaded support.
 
@@ -263,9 +310,11 @@ export PATH=$PATH:path/to/bin/gdpm
 
 ## Known Issues
 
-*   The `help` command does currently print the command/options correctly. Commands do not use the double hypen, `--command` format. Commands should be used like `gdpm command --option` instead.
+*   The code is currently changing so new issues will pop up often.
 
-*   Some asset types might not install correctly due to partial downloads being interrupted. Try running `gdpm clean <package>`, then install again.
+*   Searching is broken.
+
+*   Logging doesn't write to file.
 
 ## License
 
