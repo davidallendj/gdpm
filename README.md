@@ -42,7 +42,7 @@ Use `gdpm help` to see full list of commands.
 
 ```bash
 $ gdpm help
-Usage: gdpm [--help] [--verbose] {add,clean,clone,config,export,fetch,help,install,link,list,remote,remove,search,ui,update,version}
+Usage: gdpm [--help] [--verbose] {get,clean,clone,config,export,fetch,help,install,link,list,remote,remove,search,ui,update,version}
 
 Manage Godot engine assets from CLI
 
@@ -51,7 +51,7 @@ Optional arguments:
   -v, --verbose set verbosity level 
 
 Subcommands:
-  add           add package to project
+  get           add package to project
   clean         clean package(s) temporary files
   clone         clone package(s) to path
   config        manage config properties

@@ -219,7 +219,7 @@ namespace gdpm::package{
 	}
 
 
-	error add(
+	error get(
 		const config::context& config,
 		title_list& package_titles,
 		const params& params

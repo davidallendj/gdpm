@@ -100,7 +100,7 @@ namespace gdpm::package {
 	@param package_titles
 	@param params 
 	*/
-	GDPM_DLL_EXPORT error add(const config::context& config, title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT error get(const config::context& config, title_list& package_titles, const params& params = package::params());
 	/*!
 	@brief Remove's package and contents from local database.
 	*/

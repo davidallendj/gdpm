@@ -114,7 +114,7 @@ namespace gdpm::package_manager{
 
 		ArgumentParser program(argv[0], "0.0.1", argparse::default_arguments::help);
 		ArgumentParser install_command("install");
-		ArgumentParser add_command("add");
+		ArgumentParser get_command("get");
 		ArgumentParser remove_command("remove");
 		ArgumentParser update_command("update");
 		ArgumentParser search_command("search");
@@ -189,17 +189,17 @@ namespace gdpm::package_manager{
 			.default_value(30)
 			.nargs(0);
 
-		add_command.add_description("add package to project");
-		add_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
-		add_command.add_argument("--remote");
-		add_command.add_argument("-j", "--jobs")
+		get_command.add_description("add package to project");
+		get_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		get_command.add_argument("--remote");
+		get_command.add_argument("-j", "--jobs")
 			.help("")
 			.nargs(1)
 			.default_value(1)
 			.nargs(1)
 			.scan<'i', int>();
-		add_command.add_argument("-y", "--skip-prompt");
-		add_command.add_argument("-f", "--file")
+		get_command.add_argument("-y", "--skip-prompt");
+		get_command.add_argument("-f", "--file")
 			.help("set the file(s) to read as input")
 			.append()
 			.nargs(nargs_pattern::at_least_one);
@@ -362,7 +362,7 @@ namespace gdpm::package_manager{
 		// version_command.add_argument(Targs f_args...)
 
 		program.add_subparser(install_command);
-		program.add_subparser(add_command);
+		program.add_subparser(get_command);
 		program.add_subparser(remove_command);
 		program.add_subparser(update_command);
 		program.add_subparser(search_command);
@@ -402,13 +402,13 @@ namespace gdpm::package_manager{
 			set_if_used(install_command, params.input_files, "file");
 			set_if_used(install_command, config.timeout, "timeout");
 		}
-		else if(program.is_subcommand_used(add_command)){
+		else if(program.is_subcommand_used(get_command)){
 			action = action_e::add;
-			package_titles = get_values_from_parser(add_command);
-			set_if_used(add_command, params.remote_source, "remote");
-			set_if_used(add_command, config.jobs, "jobs");
-			set_if_used(add_command, config.skip_prompt, "skip-prompt");
-			set_if_used(add_command, params.input_files, "files");
+			package_titles = get_values_from_parser(get_command);
+			set_if_used(get_command, params.remote_source, "remote");
+			set_if_used(get_command, config.jobs, "jobs");
+			set_if_used(get_command, config.skip_prompt, "skip-prompt");
+			set_if_used(get_command, params.input_files, "files");
 		}
 		else if(program.is_subcommand_used(remove_command)){
 			action = action_e::remove;
@@ -543,7 +543,7 @@ namespace gdpm::package_manager{
 
 		switch(action){
 			case action_e::install: 		package::install(config, package_titles, params); break;
-			case action_e::add:				package::add(config, package_titles, params);
+			case action_e::add:				package::get(config, package_titles, params);
 			case action_e::remove: 			package::remove(config, package_titles, params); break;
 			case action_e::update:			package::update(config, package_titles, params); break;
 			case action_e::search: 			package::search(config, package_titles, params); break;
