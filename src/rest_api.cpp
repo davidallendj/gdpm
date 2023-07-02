@@ -17,7 +17,9 @@
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
-		return config.rest_api_params;
+		request_params rp = config.rest_api_params;
+		rp.verbose = config.verbose;
+		return rp;
 	}
 
 	request_params make_request_params(
@@ -212,7 +214,7 @@ namespace gdpm::rest_api{
 		http_params.headers.insert(http::header("Connection", "keep-alive"));
 		string request_url = _prepare_request(url, c);
 		http::response r = http.request_get(request_url, http_params);
-		if(c.verbose > 0)
+		if(c.verbose >= log::INFO)
 			log::info("get_asset().URL: {}", request_url);
 		return _parse_json(r.body, c.verbose);
 	}

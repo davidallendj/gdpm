@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 // RapidJSON
+#include <any>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/writer.h>
@@ -14,6 +15,7 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
+#include <tabulate/table.hpp>
 
 
 // fmt
@@ -67,7 +69,7 @@ namespace gdpm::config{
 		file.open(path, std::ios::in);
 		if(!file){
 			if(config.verbose)
-				log::info("No configuration file found. Creating a new one.");
+				log::warn("No configuration file found. Creating a new one.");
 			config = make_context();
 			save(config.path, config);
 			return error();
@@ -230,6 +232,46 @@ namespace gdpm::config{
 		return error();
 	}
 
+	error set_property(
+		config::context& config,
+		const string& property,
+		const any& value
+	){
+		log::println("config::set_property() called");
+		if(property == "username")					config.username 		= std::any_cast<string>(value);
+		else if(property == "password") 			config.password 		= std::any_cast<string>(value);
+		else if(property == "path")					config.path				= std::any_cast<string>(value);
+		else if(property == "token")				config.token			= std::any_cast<string>(value);
+		else if(property == "packages_dir")			config.packages_dir		= std::any_cast<string>(value);
+		else if(property == "tmp_dir")				config.tmp_dir			= std::any_cast<string>(value);
+		else if(property == "remote_sources")		config.remote_sources	= std::any_cast<string_map>(value);
+		else if(property == "jobs")					config.jobs				= std::any_cast<int>(value);
+		else if(property == "timeout")				config.timeout			= std::any_cast<int>(value);
+		else if(property == "enable_sync")			config.enable_sync		= std::any_cast<bool>(value);
+		else if(property == "enable_cache")			config.enable_cache		= std::any_cast<bool>(value);
+		else if(property == "skip_prompt")			config.skip_prompt		= std::any_cast<bool>(value);
+		else if(property == "enable_file_logging")	config.enable_file_logging		= std::any_cast<bool>(value);
+		else if(property == "clean_temporary")		config.clean_temporary	= std::any_cast<bool>(value);
+		else{
+			return log::error_rc(error(
+				constants::error::INVALID_CONFIG,
+				"Could not find property"
+			));
+		}
+	}
+
+	template <typename T>
+	T& get_property(
+		const config::context& config,
+		const string& property
+	){
+		log::println("config::get_property() called");
+		if(property == "username")			return config.username;
+		else if(property == "password")		return config.password;
+		else if(property == "path")			return config.path;
+		else if(property == "token")		return config.token;
+		else if(property == "package_dir") 	return config.packages_dir;
+	}
 
 	context make_context(
 		const string& username, 
@@ -240,8 +282,8 @@ namespace gdpm::config{
 		const string& packages_dir, 
 		const string& tmp_dir, 
 		const string_map& remote_sources, 
-		size_t threads, 
-		size_t timeout, 
+		int jobs, 
+		int timeout, 
 		bool enable_sync, 
 		bool enable_file_logging, 
 		int verbose
@@ -254,7 +296,7 @@ namespace gdpm::config{
 			.packages_dir 			= (packages_dir.empty()) ? string(getenv("HOME")) + ".gdpm" : packages_dir,
 			.tmp_dir 				= tmp_dir,
 			.remote_sources 		= remote_sources,
-			.jobs 					= threads,
+			.jobs 					= jobs,
 			.timeout 				= timeout,
 			.enable_sync 			= enable_sync,
 			.enable_file_logging 	= enable_file_logging,
@@ -293,6 +335,8 @@ namespace gdpm::config{
 		const context& config,
 		const string& property
 	){
+		using namespace tabulate;
+
 		if(property.empty())					return;
 		else if(property == "username") 		log::println("username: {}", config.username);
 		else if(property == "password") 		log::println("password: {}", config.password);
@@ -311,34 +355,103 @@ namespace gdpm::config{
 		else if(property == "verbose") 			log::println("verbose: {}", config.verbose);
 	}
 
+
+	void add_row(
+		tabulate::Table& table, 
+		const context& config, 
+		const string property
+	){
+		if(property.empty())					return;
+		else if(property == "username") 		table.add_row({"Username", config.username});
+		else if(property == "password") 		table.add_row({"Password", config.password});
+		else if(property == "path") 			table.add_row({"Path", config.path});
+		else if(property == "token") 			table.add_row({"Token", config.token});
+		else if(property == "packages_dir") 	table.add_row({"Package Directory", config.packages_dir});
+		else if(property == "tmp_dir") 			table.add_row({"Temp Directory", config.tmp_dir});
+		else if(property == "remote_sources") 	table.add_row({"Remotes", utils::join(config.remote_sources, "\t", "\n")});
+		else if(property == "jobs") 			table.add_row({"Threads", std::to_string(config.jobs)});
+		else if(property == "timeout") 			table.add_row({"Timeout", std::to_string(config.timeout)});
+		else if(property == "sync") 			table.add_row({"Fetch Assets", std::to_string(config.enable_sync)});
+		else if(property == "cache") 			table.add_row({"Cache", std::to_string(config.enable_cache)});
+		else if(property == "prompt") 			table.add_row({"Skip Prompt", std::to_string(config.skip_prompt)});
+		else if(property == "logging") 			table.add_row({"File Logging", std::to_string(config.enable_file_logging)});
+		else if(property == "clean") 			table.add_row({"Clean Temporary", std::to_string(config.clean_temporary)});
+		else if(property == "verbose") 			table.add_row({"Verbosity", std::to_string(config.verbose)});
+	}
+
 	void print_properties(
 		const context& config,
 		const string_list& properties
 	){
-		if(properties.empty()){
-			_print_property(config, "username");
-			_print_property(config, "password");
-			_print_property(config, "path");
-			_print_property(config, "token");
-			_print_property(config, "packages_dir");
-			_print_property(config, "tmp_dir");
-			_print_property(config, "remote_sources");
-			_print_property(config, "jobs");
-			_print_property(config, "timeout");
-			_print_property(config, "sync");
-			_print_property(config, "cache");
-			_print_property(config, "prompt");
-			_print_property(config, "logging");
-			_print_property(config, "clean");
-			_print_property(config, "verbose");
-		}
-		std::for_each(
-			properties.begin(),
-			properties.end(),
-			[&config](const string& property){
-				_print_property(config, property);
+		using namespace tabulate;
+
+		if(config.style == config::print_style::list){
+			if(properties.empty()){
+				_print_property(config, "username");
+				_print_property(config, "password");
+				_print_property(config, "path");
+				_print_property(config, "token");
+				_print_property(config, "packages_dir");
+				_print_property(config, "tmp_dir");
+				_print_property(config, "remote_sources");
+				_print_property(config, "jobs");
+				_print_property(config, "timeout");
+				_print_property(config, "sync");
+				_print_property(config, "cache");
+				_print_property(config, "prompt");
+				_print_property(config, "logging");
+				_print_property(config, "clean");
+				_print_property(config, "verbose");
 			}
-		);
+			else {
+				std::for_each(
+					properties.begin(),
+					properties.end(),
+					[&config](const string& property){
+						_print_property(config, property);
+					}
+				);
+			}
+		}
+		else if(config.style == config::print_style::table){
+			Table table;
+			if(properties.empty()){
+				table.add_row({"Property", "Value"});
+				table.add_row({"Username", config.username});
+				table.add_row({"Password", config.password});
+				table.add_row({"Path", config.path});
+				table.add_row({"Token", config.token});
+				table.add_row({"Package Directory", config.token});
+				table.add_row({"Temp Directory", config.tmp_dir});
+				table.add_row({"Remotes", utils::join(config.remote_sources)});
+				table.add_row({"Threads", std::to_string(config.jobs)});
+				table.add_row({"Timeout", std::to_string(config.timeout)});
+				table.add_row({"Fetch Data", std::to_string(config.enable_sync)});
+				table.add_row({"Use Cache", std::to_string(config.enable_cache)});
+				table.add_row({"Logging", std::to_string(config.enable_file_logging)});
+				table.add_row({"Clean", std::to_string(config.clean_temporary)});
+				table.add_row({"Verbosity", std::to_string(config.verbose)});
+			}
+			else{
+				std::for_each(
+					properties.begin(),
+					properties.end(),
+					[&table, &config](const string& property){
+						add_row(table, config, property);
+					}
+				);
+			}
+			table[0].format()
+				.padding_top(1)
+				.padding_bottom(1)
+				.font_background_color(Color::red)
+				.font_style({FontStyle::bold});
+			table.column(1).format()
+				.font_color(Color::yellow);
+			table[0][1].format()
+				.font_background_color(Color::blue);
+			table.print(std::cout);
+		}
 	}
 
 }

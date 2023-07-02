@@ -22,9 +22,11 @@
 #include <rapidjson/document.h>
 #include <cxxopts.hpp>
 #include "clipp.h"
+#include "argparse/argparse.hpp"
 
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
+#include <stdexcept>
 #include <system_error>
 #include <future>
 
@@ -79,185 +81,426 @@ namespace gdpm::package_manager{
 		return error;
 	}
 
+	template <typename T, typename String = string>
+	auto set_if_used(
+		const argparse::ArgumentParser& cmd,
+		T& value,
+		const String& arg
+	){
+		using namespace argparse;
+		if(cmd.is_used(arg)){
+			value = cmd.get<T>(arg);
+		}
+	};
+
+	string_list get_packages_from_parser(
+		const argparse::ArgumentParser& cmd,
+		const std::string& arg = "packages"
+	){
+		if(cmd.is_used(arg))
+			return cmd.get<string_list>(arg);
+		return string_list();
+	}
+
 
 	error parse_arguments(int argc, char **argv){
 		using namespace clipp;
+		using namespace argparse;
 
 		/* Replace cxxopts with clipp */
 		action_e action = action_e::none;
 		package::title_list package_titles;
 		package::params params;
 
-		auto doc_format = clipp::doc_formatting{}
-			.first_column(7)
-			.doc_column(45)
-			.last_column(99);
+		ArgumentParser program(argv[0], "0.0.1", argparse::default_arguments::help);
+		ArgumentParser install_command("install");
+		ArgumentParser add_command("add");
+		ArgumentParser remove_command("remove");
+		ArgumentParser update_command("update");
+		ArgumentParser search_command("search");
+		ArgumentParser export_command("export");
+		ArgumentParser list_command("list");
+		ArgumentParser link_command("link");
+		ArgumentParser clone_command("clone");
+		ArgumentParser clean_command("clean");
+		ArgumentParser config_command("config");
+		ArgumentParser fetch_command("fetch");
+		ArgumentParser version_command("version");
+		ArgumentParser remote_command("remote");
+		ArgumentParser ui_command("ui");
+		ArgumentParser help_command("help");
+
+		ArgumentParser config_get("get");
+		ArgumentParser config_set("set");
+
+		ArgumentParser remote_add("add");
+		ArgumentParser remote_remove("remove");
+		ArgumentParser remote_list("list");
+
+		program.add_description("Manage Godot engine assets from CLI");
+		program.add_argument("-v", "--verbose")
+			.action([&](const auto&){ config.verbose += 1; })
+			.default_value(false)
+			.implicit_value(true)
+			.help("set verbosity level")		
+			.nargs(0);
+
+		install_command.add_description("install package(s)");
+		install_command.add_argument("packages")
+			.required()
+			.nargs(nargs_pattern::at_least_one)
+			.help("packages to install");
+		install_command.add_argument("--godot-version")
+			.help("set Godot version for request");
+		install_command.add_argument("--clean")
+			.help("clean temporary files")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
+		install_command.add_argument("--disable-sync")
+			.help("enable syncing with remote before installing")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
+		install_command.add_argument("--disable-cache")
+			.help("disable caching asset data")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
+		install_command.add_argument("--remote")
+			.help("set the remote to use")
+			.nargs(1);
+		install_command.add_argument("-j", "--jobs")
+			.help("set the number of parallel downloads")
+			.default_value(1)
+			.nargs(1)
+			.scan<'i', int>();
+		install_command.add_argument("-y", "--skip-prompt")
+			.help("skip the yes/no prompt")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
+		install_command.add_argument("-f", "--file")
+			.help("set the file(s) to read as input")
+			.append()
+			.nargs(1);
+		install_command.add_argument("-t", "--timeout")
+			.help("set the request timeout")
+			.default_value(30)
+			.nargs(0);
+
+		add_command.add_description("add package to project");
+		add_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		add_command.add_argument("--remote");
+		add_command.add_argument("-j", "--jobs")
+			.help("")
+			.nargs(1)
+			.default_value(1)
+			.nargs(1)
+			.scan<'i', int>();
+		add_command.add_argument("-y", "--skip-prompt");
+		add_command.add_argument("-f", "--file")
+			.help("set the file(s) to read as input")
+			.append()
+			.nargs(nargs_pattern::at_least_one);
+
+		remove_command.add_description("remove package(s)");
+		remove_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		remove_command.add_argument("--clean");
+		remove_command.add_argument("-y", "--skip-prompt");
+		remove_command.add_argument("-f", "--file")
+			.help("set the file(s) to read as input")
+			.append()
+			.nargs(nargs_pattern::at_least_one);
 		
-		/* Set global options */
-		auto debugOpt			= option("-d", "--debug").set(config.verbose, to_int(log::DEBUG)) % "show debug output";
-		auto configOpt 			= option("--config-path").set(config.path) % "set config path";
-		auto pathOpt				= option("--path").set(params.paths) % "specify a path to use with command";
-		auto typeOpt 			= option("--type").set(config.info.type) % "set package type (any|addon|project)";
-		auto sortOpt 			= option("--sort").set(config.rest_api_params.sort) % "sort packages in order (rating|cost|name|updated)";
-		auto supportOpt 			= option("--support").set(config.rest_api_params.support) % "set the support level for API (all|official|community|testing)";
-		auto maxResultsOpt 		= option("--max-results").set(config.rest_api_params.max_results) % "set the request max results";
-		auto godotVersionOpt 	= option("--godot-version").set(config.rest_api_params.godot_version) % "set the request Godot version";
-		auto packageDirOpt		= option("--package-dir").set(config.packages_dir) % "set the global package location";
-		auto tmpDirOpt			= option("--tmp-dir").set(config.tmp_dir) % "set the temporary download location";
-		auto timeoutOpt			= option("--timeout").set(config.timeout) % "set the request timeout";
-		auto verboseOpt 				= joinable(repeatable(option("-v", "--verbose").call([]{ config.verbose += 1; }))) % "show verbose output";	
+		update_command.add_description("update package(s)");
+		update_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		update_command.add_argument("--clean");
+		update_command.add_argument("--remote");
+		update_command.add_argument("-f", "--file")
+			.help("set the file(s) to read as input")
+			.append()
+			.nargs(nargs_pattern::at_least_one);
 
-		/* Set the options */
-		// auto fileOpt 			= repeatable(option("--file", "-f").set(params.input_files)  % "read file as input");
-		auto fileOpt 				= repeatable(option("--file", "-f") & values("input", params.input_files)) % "read file as input";
-		auto cleanOpt 			= option("--clean").set(config.clean_temporary) % "enable/disable cleaning temps";
-		auto parallelOpt 		= option("--jobs").set(config.jobs) % "set number of parallel jobs";
-		auto cacheOpt 			= option("--enable-cache").set(config.enable_cache) % "enable/disable local caching";
-		auto syncOpt 			= option("--enable-sync").set(config.enable_sync) % "enable/disable remote syncing";
-		auto skipOpt 			= option("-y", "--skip-prompt").set(config.skip_prompt, true) % "skip the y/n prompt";
-		auto remoteOpt			= option("--remote").set(params.remote_source) % "set remote source to use";
+		search_command.add_description("search for package(s)");
+		search_command.add_argument("packages").nargs(nargs_pattern::at_least_one);
+		search_command.add_argument("--godot-version");
+		search_command.add_argument("--remote");
+		search_command.add_argument("-f", "--file")
+			.help("set the file(s) to read as input")
+			.append()
+			.nargs(nargs_pattern::at_least_one);
 		
-		auto packageValues 		= values("packages", package_titles);
-		auto requiredPath 		= required("--path", params.args);
+		ui_command.add_description("show user interface (WIP)");
+		version_command.add_description("show version and exit");
+		help_command.add_description("show help message and exit");
+		
+		export_command.add_description("export install package(s) list");
+		export_command.add_argument("paths")
+			.help("export list of installed packages")
+			.required()
+			.nargs(nargs_pattern::at_least_one);
+		
+		list_command.add_description("show install package(s) and remotes");
+		list_command.add_argument("show")
+			.help("show installed packages or remote")
+			.nargs(nargs_pattern::any)
+			.default_value("packages");
+		list_command.add_argument("--style")
+			.help("set how to print output")
+			.nargs(1)
+			.default_value("list");
+		
+		link_command.add_description("link package(s) to path");
+		link_command.add_argument("packages")
+			.help("package(s) to link")
+			.required()
+			.nargs(1);
+		link_command.add_argument("path")
+			.help("path to link")
+			.required()
+			.nargs(1);
+		
+		clone_command.add_description("clone package(s) to path");
+		clone_command.add_argument("packages")
+			.help("package(s) to clone")
+			.required()
+			.nargs(1);;
+		clone_command.add_argument("path")
+			.help("path to clone")
+			.required()
+			.nargs(1);
+		
+		clean_command.add_description("clean package(s) temporary files");
+		clean_command.add_argument("packages")
+			.help("package(s) to clean")
+			.required()
+			.nargs(nargs_pattern::at_least_one);
 
-		auto installCmd = "install" % (
-			command("install").set(action, action_e::install),
-			packageValues % "package(s) to install from asset library",
-			godotVersionOpt, cleanOpt, parallelOpt, syncOpt, skipOpt, remoteOpt, fileOpt
-		);
-		auto addCmd = "add" % (
-			command("add").set(action, action_e::add),
-			packageValues % "package(s) to add to project", 
-			parallelOpt, skipOpt, remoteOpt, fileOpt
-		);
-		auto removeCmd = "remove" % (
-			command("remove").set(action, action_e::remove),
-			packageValues % "packages(s) to remove from project",
-			fileOpt, skipOpt, cleanOpt
-		);
-		auto updateCmd = "update package(s)" % (
-			command("update").set(action, action_e::update),
-			packageValues % ""
-		);
-		auto searchCmd = "search for package(s)" % (
-			command("search").set(action, action_e::search),
-			packageValues % "",
-			godotVersionOpt, fileOpt, remoteOpt, configOpt
-		);
-		auto exportCmd = "export installed package list to file" % (
-			command("export").set(action, action_e::p_export),
-			values("paths", params.args) % ""
-		);
-		auto listCmd = "show installed packages" % (
-			command("list").set(action, action_e::list)
-		);
-		auto linkCmd = "create link from package to project" % (
-			command("link").set(action, action_e::link),
-			value("package", package_titles) % "",
-			value("path", params.args) % ""
-		);
-		auto cloneCmd = "clone package to project" % (
-			command("clone").set(action, action_e::clone),
-			value("package", package_titles) % "",
-			value("path", params.args) % ""
-		);
-		auto cleanCmd = "clean temporary download files" % (
-			command("clean").set(action, action_e::clean),
-			values("packages", package_titles) % ""
-		);
-		auto configCmd = "manage config properties" % (
-			command("config").set(action, action_e::config_get) ,
-			(
-				( greedy(command("get")).set(action, action_e::config_get),
-				  option(repeatable(values("properties", params.args)))
-				) % "get config properties"
-				| 
-				( command("set").set(action, action_e::config_set) , 
-				  value("property", params.args[1]).call([]{}),
-				  value("value", params.args[2]).call([]{})
-				) % "set config properties"
-			)
-		);
-		auto fetchCmd = "fetch asset data from remote" % (
-			command("fetch").set(action, action_e::fetch),
-			option(values("remote", params.args)) % ""
-		);
-		auto versionCmd = "show the version and exit" %(
-			command("version").set(action, action_e::version)
-		);
-		auto add_arg = [&params](string arg) { params.args.emplace_back(arg); };
-		auto remoteCmd = "manage remote sources" % (
-			command("remote").set(action, action_e::remote_list).if_missing(
-				[]{ remote::print_repositories(config); }
-			),
-			( 
-				"add" % ( command("add").set(action, action_e::remote_add),
-					word("name").call(add_arg) % "", 
-					value("url").call(add_arg) % ""
-				)
-				| 
-				"remove a remote source" % ( command("remove").set(action, action_e::remote_remove),
-					words("names", params.args) % ""
-				)
-				|
-				"list remote sources" % ( command("list").set(action, action_e::remote_list))
-			)
-		);
-		auto uiCmd = "start with UI" % (
-			command("ui").set(action, action_e::ui)
-		);
-		auto helpCmd = "show this message and exit" % (
-			command("help").set(action, action_e::help)
-		);
+		fetch_command.add_description("fetch and sync asset data");
+		fetch_command.add_argument("remote")
+			.help("remote to fetch")
+			.required()
+			.nargs(1);
 
-		auto cli = (
-			debugOpt, verboseOpt, configOpt,
-			(installCmd | addCmd | removeCmd | updateCmd | searchCmd | exportCmd |
-			listCmd | linkCmd | cloneCmd | cleanCmd | configCmd | fetchCmd |
-			remoteCmd | uiCmd | helpCmd | versionCmd)
-		);
+		config_get.add_argument("properties")
+			.help("get config properties")
+			.nargs(nargs_pattern::any);
+		config_get.add_description("get config properties");
+		config_set.add_argument("property")
+			.help("property name")
+			.required()
+			.nargs(1);
+		config_set.add_argument("value")
+			.help("property value")
+			.required()
+			.nargs(1);
+		config_set.add_description("set config property");
 
-		/* Make help output */
-		string man_page_format("");
-		auto man_page = make_man_page(cli, argv[0], doc_format)
-			.prepend_section("DESCRIPTION", "\tManage Godot Game Engine assets from the command-line.")
-			.append_section("LICENSE", "\tSee the 'LICENSE.md' file for more details.");
-		std::for_each(man_page.begin(), man_page.end(), 
-			[&man_page_format](const man_page::section& s){
-				man_page_format += s.title() + "\n";
-				man_page_format += s.content() + "\n\n";
+		config_command.add_description("manage config properties");
+		config_command.add_subparser(config_get);
+		config_command.add_subparser(config_set);
+
+		remote_add.add_argument("name")
+			.help("remote name")
+			.nargs(1);
+		remote_add.add_argument("url")
+			.help("remote url")
+			.nargs(1);
+		remote_remove.add_argument("names")
+			.help("remote name")
+			.nargs(nargs_pattern::at_least_one);
+		remote_list.add_argument("--style")
+			.help("set print style")
+			.nargs(1);
+
+		remote_command.add_description("manage remote(s)");
+		remote_command.add_subparser(remote_add);
+		remote_command.add_subparser(remote_remove);
+		remote_command.add_subparser(remote_list);
+
+		// version_command.add_argument(Targs f_args...)
+
+		program.add_subparser(install_command);
+		program.add_subparser(add_command);
+		program.add_subparser(remove_command);
+		program.add_subparser(update_command);
+		program.add_subparser(search_command);
+		program.add_subparser(export_command);
+		program.add_subparser(list_command);
+		program.add_subparser(link_command);
+		program.add_subparser(clone_command);
+		program.add_subparser(clean_command);
+		program.add_subparser(config_command);
+		program.add_subparser(fetch_command);
+		program.add_subparser(remote_command);
+		program.add_subparser(version_command);
+		program.add_subparser(ui_command);
+		program.add_subparser(help_command);
+
+		try{
+			program.parse_args(argc, argv);
+			// program.parse_known_args(argc, argv);
+		} catch(const std::runtime_error& e){
+			return log::error_rc(error(
+				constants::error::ARGPARSE_ERROR,
+				 e.what())
+			);
+		}
+
+		if(program.is_subcommand_used(install_command)){
+			action = action_e::install;
+			if(install_command.is_used("packages"))
+				package_titles = install_command.get<string_list>("packages");
+			set_if_used(install_command, config.rest_api_params.godot_version, "godot-version");
+			set_if_used(install_command, config.clean_temporary, "clean");
+			set_if_used(install_command, config.enable_sync, "disable-sync");
+			set_if_used(install_command, config.enable_cache, "disable-cache");
+			set_if_used(install_command, params.remote_source, "remote");
+			set_if_used(install_command, config.jobs, "jobs");
+			set_if_used(install_command, config.skip_prompt, "skip-prompt");
+			set_if_used(install_command, params.input_files, "file");
+			set_if_used(install_command, config.timeout, "timeout");
+		}
+		else if(program.is_subcommand_used(add_command)){
+			action = action_e::add;
+			package_titles = get_packages_from_parser(add_command);
+			set_if_used(add_command, params.remote_source, "remote");
+			set_if_used(add_command, config.jobs, "jobs");
+			set_if_used(add_command, config.skip_prompt, "skip-prompt");
+			set_if_used(add_command, params.input_files, "files");
+		}
+		else if(program.is_subcommand_used(remove_command)){
+			action = action_e::remove;
+			package_titles = get_packages_from_parser(remove_command);
+			set_if_used(remove_command, config.clean_temporary, "clean");
+			set_if_used(remove_command, config.skip_prompt, "skip-prompt");
+			set_if_used(remove_command, params.input_files, "file");
+		}
+		else if(program.is_subcommand_used(update_command)){
+			action = action_e::update;
+			package_titles = get_packages_from_parser(program);
+			set_if_used(update_command, config.clean_temporary, "clean");
+			set_if_used(update_command, params.remote_source, "remote");
+			set_if_used(update_command, params.input_files, "file");
+		}
+		else if(program.is_subcommand_used(search_command)){
+			action = action_e::search;
+			package_titles = get_packages_from_parser(search_command);
+			set_if_used(search_command, config.rest_api_params.godot_version, "godot-version");
+			set_if_used(search_command, params.remote_source, "remote");
+			set_if_used(search_command, params.input_files, "file");
+		}
+		else if(program.is_subcommand_used(export_command)){
+			action = action_e::p_export;
+			params.paths = export_command.get<string_list>("paths");
+		}
+		else if(program.is_subcommand_used(list_command)){
+			action = action_e::list;
+			// auto list = get_parser(program, "list");
+			if(list_command.is_used("show"))
+				params.args = list_command.get<string_list>("show");
+			if(list_command.is_used("style")){
+				string style = list_command.get<string>("style");
+				if(!style.compare("list"))
+					config.style = config::print_style::list;
+				else if(!style.compare("table"))
+					config.style = config::print_style::table;
 			}
-		);
-
-		// log::level = config.verbose;
-		if(clipp::parse(argc, argv, cli)){
-			log::level = config.verbose;
-			switch(action){
-				case action_e::install: 		package::install(config, package_titles, params); break;
-				case action_e::add:				package::add(config, package_titles);
-				case action_e::remove: 			package::remove(config, package_titles, params); break;
-				case action_e::update:			package::update(config, package_titles, params); break;
-				case action_e::search: 			package::search(config, package_titles, params); break;
-				case action_e::p_export:		package::export_to(params.args); break;
-				case action_e::list: 			package::list(config, params); break;
-												/* ...opts are the paths here */
-				case action_e::link:			package::link(config, package_titles, params); break;
-				case action_e::clone:			package::clone(config, package_titles, params); break;
-				case action_e::clean:			package::clean_temporary(config, package_titles); break;
-				case action_e::config_get:		config::print_properties(config, params.args); break;
-				case action_e::config_set:		config::handle_config(config, package_titles, params.opts); break;
-				case action_e::fetch:			package::synchronize_database(config, package_titles); break;
-				case action_e::sync: 			package::synchronize_database(config, package_titles); break;
-				case action_e::remote_list:		remote::print_repositories(config); break;
-				case action_e::remote_add: 		remote::add_repository(config, params.args); break;
-				case action_e::remote_remove: 	remote::remove_respositories(config, params.args); break;
-				case action_e::ui:				log::println("UI not implemented yet"); break;
-				case action_e::help: 			log::println("{}", man_page_format); break;
-				case action_e::version:			break;
-				case action_e::none:			/* ...here to run with no command */ break;
+		}
+		else if(program.is_subcommand_used(link_command)){
+			action = action_e::link;
+			package_titles = get_packages_from_parser(link_command);
+			set_if_used(link_command, params.paths, "path");
+		}
+		else if(program.is_subcommand_used(clone_command)){
+			action = action_e::clone;
+			package_titles = get_packages_from_parser(clone_command);
+			set_if_used(clone_command, params.paths, "path");
+		}
+		else if(program.is_subcommand_used(clean_command)){
+			action = action_e::clean;
+			package_titles = get_packages_from_parser(clean_command);
+		}
+		else if(program.is_subcommand_used(config_command)){
+			if(config_command.is_subcommand_used(config_get)){
+				action = action_e::config_get;
+				if(config_get.is_used("properties"))
+					params.args = config_get.get<string_list>("properties");
 			}
-		} else {
-			log::println("usage:\n{}", usage_lines(cli, argv[0]).str());
+			else if(config_command.is_subcommand_used(config_set)){
+				action = action_e::config_set;
+				if(config_set.is_used("property"))
+					params.args.emplace_back(config_set.get<string>("property"));
+				if(config_set.is_used("value"))
+					params.args.emplace_back(config_set.get<string>("value"));
+			}
+			// else{
+			// 	action = action_e::config_get;
+			// }
+		}
+		else if(program.is_subcommand_used(fetch_command)){
+			action = action_e::fetch;
+			params.remote_source = fetch_command.get("remote");
+		}
+		else if(program.is_subcommand_used(version_command)){
+			action = action_e::version;
+		}
+		else if(program.is_subcommand_used(remote_command)){
+			if(remote_command.is_subcommand_used(remote_add)){
+				action = action_e::remote_add;
+				if(remote_add.is_used("name"))
+					params.args.emplace_back(remote_add.get<string>("name"));
+				if(remote_add.is_used("url"))	
+					params.args.emplace_back(remote_add.get<string>("url"));
+				for(const auto& arg: params.args){
+					log::println("{}: {}", params.args[0], params.args[1]);
+				}
+			}
+			if(remote_command.is_subcommand_used(remote_remove)){
+				action = action_e::remote_remove;
+				if(remote_remove.is_used("names"))
+					params.args = remote_remove.get<string_list>("names");
+			}
+			if(remote_command.is_subcommand_used(remote_list)){
+				action = action_e::remote_list;
+				string style = remote_list.get<string>("style");
+				if(!style.compare("list"))
+					config.style = config::print_style::list;
+				else if(!style.compare("table"))
+					config.style = config::print_style::table;
+			}
+		}
+		else if(program.is_subcommand_used("ui")){
+			action = action_e::ui;
+		}
+		else if(program.is_subcommand_used("help")){
+			action = action_e::help;
+		}
+
+		switch(action){
+			case action_e::install: 		package::install(config, package_titles, params); break;
+			case action_e::add:				package::add(config, package_titles, params);
+			case action_e::remove: 			package::remove(config, package_titles, params); break;
+			case action_e::update:			package::update(config, package_titles, params); break;
+			case action_e::search: 			package::search(config, package_titles, params); break;
+			case action_e::p_export:		package::export_to(params.paths); break;
+			case action_e::list: 			package::list(config, params); break;
+											/* ...opts are the paths here */
+			case action_e::link:			package::link(config, package_titles, params); break;
+			case action_e::clone:			package::clone(config, package_titles, params); break;
+			case action_e::clean:			package::clean_temporary(config, package_titles); break;
+			case action_e::config_get:		config::print_properties(config, params.args); break;
+			case action_e::config_set:		config::set_property(config, params.args[0], params.args[1]); break;
+			case action_e::fetch:			package::synchronize_database(config, package_titles); break;
+			case action_e::sync: 			package::synchronize_database(config, package_titles); break;
+			case action_e::remote_list:		remote::print_repositories(config); break;
+			case action_e::remote_add: 		remote::add_repository(config, params.args); break;
+			case action_e::remote_remove: 	remote::remove_respositories(config, params.args); break;
+			case action_e::ui:				log::println("UI not implemented"); break;
+			case action_e::help: 			program.print_help(); break;
+			case action_e::version:			break;
+			case action_e::none:			program.usage(); break;/* ...here to run with no command */ break;
 		}
 		return error();
 	}

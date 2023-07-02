@@ -13,3 +13,6 @@
 [submodule "modules/csv2"]
 	path = modules/csv2
 	url = https://github.com/p-ranav/csv2
+[submodule "modules/argparse"]
+	path = modules/argparse
+	url = https://github.com/p-ranav/argparse

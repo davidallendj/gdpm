@@ -30,7 +30,7 @@ find_package(SQLiteCpp CONFIG REQUIRED)
 set(CMAKE_CXX_COMPILER "clang++")
 set(CMAKE_BUILD_RPATH "build/cmake")
 set(CMAKE_CXX_FLAGS 
-	"${CMAKE_CXX_FLAGS} -std=c++20 -Ofast -fPIC -fPIE -fpermissive -Wall -Wno-switch -Wno-unused-variable -Wno-unused-function -Wno-sign-conversion -pedantic-errors"
+	"${CMAKE_CXX_FLAGS} -std=c++20 -Ofast -fPIC -fPIE -fpermissive -Wall -Wno-switch -Wno-unused-variable -Wno-unused-function -Wno-sign-conversion -Wno-deprecated-declarations -pedantic-errors"
 )
 set(INCLUDE_DIRS
 	"include"

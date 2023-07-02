@@ -22,7 +22,7 @@ TEST_SUITE("Command functions"){
 	using namespace gdpm::package_manager;
 
 	package::params params = package::params{
-		.remote_source	= "test"
+		.remote_source	= "test",
 	};
 	config::context config = config::context{
 		.username 		= "",
@@ -33,9 +33,10 @@ TEST_SUITE("Command functions"){
 		.remote_sources	= {
 			{"test", "http://godotengine.org/asset-library/api"}
 		},
+		.skip_prompt	= true,
 		.info {
 			.godot_version	= "latest",
-		}
+		},
 	};
 
 	package::title_list package_titles{"ResolutionManagerPlugin","godot-hmac", "Godot"};

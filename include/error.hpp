@@ -13,6 +13,8 @@ namespace gdpm::constants::error{
 		NONE = 0,
 		UNKNOWN,
 		UNKNOWN_COMMAND,
+		UNKNOWN_ARGUMENT,
+		ARGPARSE_ERROR,
 		NOT_FOUND,
 		NOT_DEFINED,
 		NOT_IMPLEMENTED,
@@ -100,6 +102,11 @@ namespace gdpm{
 				fmt::make_format_args(prefix.contents, e.get_message())
 			);
 #endif
+		}
+
+		static constexpr gdpm::error error_rc(const gdpm::error& e){
+			error(e);
+			return e;
 		}
 
 		static void error(const char *p, const gdpm::error& e){

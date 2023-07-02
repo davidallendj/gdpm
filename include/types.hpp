@@ -1,11 +1,13 @@
 #pragma once
 
+#include "clipp.h"
 #include <tuple>
 #include <functional>
 #include <type_traits>
 #include <string>
 #include <variant>
 #include <future>
+#include <any>
 
 namespace gdpm{
 	class error;
@@ -47,6 +49,7 @@ namespace gdpm{
 	using string_list 	= std::vector<string>;
 	using string_map 	= std::unordered_map<string, string>;
 	using string_pair 	= std::pair<string, string>;
+	using any			= std::any;
 	using var 			= std::variant<int, float, bool, string, string_list, string_map, size_t>;
 	template <typename T = var> 
 	using _args_t 		= std::vector<T>;

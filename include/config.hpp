@@ -17,6 +17,11 @@ namespace gdpm::package{
 }
 
 namespace gdpm::config{
+	enum class print_style{
+		list = 0,
+		table = 1,
+	};
+
 	struct context{
 		string username;
 		string password;
@@ -25,24 +30,28 @@ namespace gdpm::config{
 		string packages_dir;
 		string tmp_dir;
 		string_map remote_sources;
-		size_t jobs					= 1;
-		size_t timeout				= 3000;
-		size_t max_results			= 200;
+		int jobs					= 1;
+		int timeout					= 3000;
 		bool enable_sync			= true;
 		bool enable_cache			= true;
 		bool skip_prompt			= false;
 		bool enable_file_logging;
 		bool clean_temporary;
-		int verbose;
+
+		int verbose					= log::INFO;
+		print_style style			= print_style::list;
 		package::info info;
-		rest_api::request_params api_params;
+		rest_api::request_params rest_api_params;
 	};
 
 	string to_json(const context& config, bool pretty_print = false);
 	error load(std::filesystem::path path, context& config);
 	error save(std::filesystem::path path, const context& config);
 	error handle_config(config::context& config, const args_t& args, const var_opts& opts);
-	context make_context(const string& username = GDPM_CONFIG_USERNAME, const string& password = GDPM_CONFIG_PASSWORD, const string& path = GDPM_CONFIG_PATH, const string& token = GDPM_CONFIG_TOKEN, const string& godot_version = GDPM_CONFIG_GODOT_VERSION, const string& packages_dir = GDPM_CONFIG_LOCAL_PACKAGES_DIR, const string& tmp_dir = GDPM_CONFIG_LOCAL_TMP_DIR, const string_map& remote_sources = {GDPM_CONFIG_REMOTE_SOURCES}, size_t threads = GDPM_CONFIG_THREADS, size_t timeout = 0, bool enable_sync = GDPM_CONFIG_ENABLE_SYNC, bool enable_file_logging = GDPM_CONFIG_ENABLE_FILE_LOGGING, int verbose = GDPM_CONFIG_VERBOSE);
+	error set_property(config::context& config, const string& property, const any& value);
+	template <typename T = any>
+	T& get_property(const config::context& config, const string& property);
+	context make_context(const string& username = GDPM_CONFIG_USERNAME, const string& password = GDPM_CONFIG_PASSWORD, const string& path = GDPM_CONFIG_PATH, const string& token = GDPM_CONFIG_TOKEN, const string& godot_version = GDPM_CONFIG_GODOT_VERSION, const string& packages_dir = GDPM_CONFIG_LOCAL_PACKAGES_DIR, const string& tmp_dir = GDPM_CONFIG_LOCAL_TMP_DIR, const string_map& remote_sources = {GDPM_CONFIG_REMOTE_SOURCES}, int jobs = GDPM_CONFIG_THREADS, int timeout = 0, bool enable_sync = GDPM_CONFIG_ENABLE_SYNC, bool enable_file_logging = GDPM_CONFIG_ENABLE_FILE_LOGGING, int verbose = GDPM_CONFIG_VERBOSE);
 	error validate(const rapidjson::Document& doc);
 	void print_json(const context& config);
 	void print_properties(const context& config, const string_list& properties);

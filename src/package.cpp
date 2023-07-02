@@ -15,6 +15,7 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
+#include <tabulate/table.hpp>
 
 namespace gdpm::package{
 	
@@ -39,8 +40,7 @@ namespace gdpm::package{
 		*/
 
 		/* Append files from --file option */
-		if(!params.input_files.empty()){
-			log::print("input files");
+		// if(!params.input_files.empty()){
 			for(const auto& filepath : params.input_files){
 				string contents = utils::readfile(filepath);
 				log::print("contents: {}", contents);
@@ -51,7 +51,7 @@ namespace gdpm::package{
 					std::end(input_titles)
 				);
 			}
-		}
+		// }
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_found = {};
 		package::info_list p_cache = result.unwrap_unsafe();
@@ -445,16 +445,14 @@ namespace gdpm::package{
 
 			rest_api_params.filter = http.url_escape(p_title);
 
-			std::string request_url{constants::HostUrl};
+			string request_url{constants::HostUrl};
 			request_url += rest_api::endpoints::GET_Asset;
 			Document doc = rest_api::get_assets_list(request_url, rest_api_params);
 			if(doc.IsNull()){
-				error error(
+				return log::error_rc(error(
 					constants::error::HOST_UNREACHABLE,
 					"Could not fetch metadata."
-				);
-				log::error(error);
-				return error;
+				));
 			}
 
 			// log::info("{} package(s) found...", doc["total_items"].GetInt());
@@ -476,18 +474,21 @@ namespace gdpm::package{
 			result_t r_installed = cache::get_installed_packages();
 			info_list p_installed = r_installed.unwrap_unsafe();
 			if(!p_installed.empty()){
-				print_list(p_installed);
+				if(config.style == config::print_style::list)
+					print_list(p_installed);
+				else if(config.style == config::print_style::table){
+					print_table(p_installed);
+				}
 			} 
 		}
 		else if(show == "remote"){
 			remote::print_repositories(config);
 		}
 		else{
-			error error(
+			log::error(error(
 				constants::error::UNKNOWN_COMMAND,
 				"Unrecognized subcommand. Try either 'packages' or 'remote' instead."
-			);
-			log::error(error);
+			));
 		}
 		return error();
 	}
@@ -520,7 +521,7 @@ namespace gdpm::package{
 				}
 			}
 			std::ofstream of(path);
-			log::println("writing contents to file");
+			log::println("export: {}", path);
 			of << output;
 			of.close();
 		}
@@ -532,17 +533,15 @@ namespace gdpm::package{
 	error link(
 		const config::context& config,
 		const title_list& package_titles, 
-		const package::params& params /* path is last arg */
+		const package::params& params
 	){
 		using namespace std::filesystem;
 
-		if(params.args.empty()){
-			error error(
-				constants::error::INVALID_ARG_COUNT,
-				"Must supply at least 2 arguments (package name and path)"
-			);
-			log::error(error);
-			return error;
+		if(params.paths.empty()){
+			return log::error_rc(error(
+				constants::error::PATH_NOT_DEFINED,
+				"Path is required"
+			));
 		}
 
 		/* Check for packages in cache to link */
@@ -550,12 +549,10 @@ namespace gdpm::package{
 		info_list p_found = {};
 		info_list p_cache = r_cache.unwrap_unsafe();
 		if(p_cache.empty()){
-			error error(
+			return log::error_rc(error(
 				constants::error::NOT_FOUND,
 				"Could not find any packages to link in cache."
-			);
-			log::error(error);
-			return error;
+			));
 		}
 
 		for(const auto& p_title : package_titles){
@@ -575,17 +572,15 @@ namespace gdpm::package{
 		}
 
 		/* Get the storage paths for all packages to create symlinks */
-		path_refs paths = path_refs({params.args.back()});
 		const path package_dir{config.packages_dir};
 		for(const auto& p : p_found){
-			for(const auto& path : paths){
-				const string _path = path;
-				log::info_n("link: \"{}\" -> '{}'...", p.title, _path + "/" + p.title);
+			for(const auto& path : params.paths){
+				log::info_n("link: \"{}\" -> '{}'...", p.title, path + "/" + p.title);
 				// std::filesystem::path target{config.packages_dir + "/" + p.title};
 				std::filesystem::path target = {current_path().string() + "/" + config.packages_dir + "/" + p.title};
-				std::filesystem::path symlink_path{_path + "/" + p.title};
+				std::filesystem::path symlink_path{path + "/" + p.title};
 				if(!std::filesystem::exists(symlink_path.string()))
-					std::filesystem::create_directories(_path + "/");
+					std::filesystem::create_directories(path + "/");
 				std::error_code ec;
 				std::filesystem::create_directory_symlink(target, symlink_path, ec);
 				if(ec){
@@ -609,13 +604,11 @@ namespace gdpm::package{
 	){
 		using namespace std::filesystem;
 
-		if(params.args.empty()){
-			error error(
-				constants::error::INVALID_ARG_COUNT,
-				"Must supply at least 2 arguments (package name and path)"
-			);
-			log::error(error);
-			return error;
+		if(params.paths.empty()){
+			return log::error_rc(error(
+				constants::error::PATH_NOT_DEFINED,
+				"Path is required"
+			));
 		}
 
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
@@ -624,12 +617,10 @@ namespace gdpm::package{
 
 		/* Check for installed packages to clone */
 		if(p_cache.empty()){
-			error error(
+			return log::error_rc(error(
 				constants::error::NO_PACKAGE_FOUND,
 				"Could not find any packages to clone in cache."
-			);
-			log::error(error);
-			return error;
+			));
 		}
 
 		for(const auto& p_title : package_titles){
@@ -694,7 +685,6 @@ namespace gdpm::package{
 		}
 	}
 
-
 	void print_list(const rapidjson::Document& json){
 		for(const auto& o : json["result"].GetArray()){
 			log::println(
@@ -715,6 +705,34 @@ namespace gdpm::package{
 				o["cost"]			.GetString()
 			);
 		}
+	}
+
+	void print_table(const info_list& packages){
+		using namespace tabulate;
+		Table table;
+		table.add_row({
+			"Asset Name",
+			 "Author",
+			 "Category",
+			 "Version",
+			 "Godot Version",
+			 "License/Cost",
+			 "Last Modified",
+			 "Support"
+		});
+		for(const auto& p : packages){
+			table.add_row({
+				p.title, 
+				p.author,
+				p.category,
+				p.version,
+				p.godot_version,
+				p.cost,
+				p.modify_date,
+				p.support_level
+			});
+		}
+		table.print(std::cout);
 	}
 
 

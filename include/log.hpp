@@ -77,6 +77,7 @@ namespace gdpm::log
 	inline constexpr const char* get_info_prefix() { return "[INFO {}] "; }
 	inline constexpr const char* get_error_prefix() { return "[ERROR {}] "; }
 	inline constexpr const char* get_debug_prefix() { return "[DEBUG {}] "; }
+	inline constexpr const char* get_warning_prefix() { return "[WARN {}] "; }
 
 	static void vlog(fmt::string_view format, fmt::format_args args){
 		fmt::vprint(format, args);
@@ -141,6 +142,21 @@ namespace gdpm::log
 		);
 #endif
 	}
+
+	template <typename S, typename...Args>
+	static constexpr void warn(const S& format, Args&&...args){
+		if(log::level < to_int(log::WARNING))
+			return;
+#if GDPM_LOG_LEVEL > WARN
+		set_prefix_if(std::format(get_warning_prefix(), utils::timestamp()), true);
+		set_suffix_if("\n");
+		vlog(
+			fmt::format(GDPM_COLOR_LOG_WARNING "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			fmt::make_format_args(args...)
+		);
+#endif
+	}
+
 
 	template <typename S, typename...Args>
 	static constexpr void print(const S& format, Args&&...args){

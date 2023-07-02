@@ -1,9 +1,11 @@
 
 #include "remote.hpp"
+#include "config.hpp"
 #include "error.hpp"
 #include "log.hpp"
 #include "types.hpp"
 #include <readline/readline.h>
+#include <tabulate/table.hpp>
 
 namespace gdpm::remote{
 	
@@ -12,7 +14,7 @@ namespace gdpm::remote{
 		const args_t &args
 	){
 		/* Check if enough args were provided. */
-		log::debug("arg count: {}\nargs: {}", args.size(), utils::join(args));
+		log::println("arg count: {}\nargs: {}", args.size(), utils::join(args));
 		if (args.size() < 2){
 			return error(
 				constants::error::INVALID_ARG_COUNT,
@@ -31,7 +33,7 @@ namespace gdpm::remote{
 		config::context& config, 
 		const args_t& args
 	){
-		log::debug("arg count: {}\nargs: {}", args.size(), utils::join(args));
+		log::println("arg count: {}\nargs: {}", args.size(), utils::join(args));
 		if(args.size() < 1){
 			return error(
 				constants::error::INVALID_ARG_COUNT,
@@ -61,8 +63,19 @@ namespace gdpm::remote{
 
 	void print_repositories(const config::context& config){
 		const auto &rs = config.remote_sources;
-		std::for_each(rs.begin(), rs.end(), [](const string_pair& p){
-			log::println("{}: {}", p.first, p.second);
-		});
+		if(config.style == config::print_style::list){
+			std::for_each(rs.begin(), rs.end(), [](const string_pair& p){
+				log::println("{}: {}", p.first, p.second);
+			});
+		}
+		else if(config.style == config::print_style::table){
+			using namespace tabulate;
+			Table table;
+			table.add_row({"Name", "URL"});
+			std::for_each(rs.begin(), rs.end(), [&table](const string_pair& p){
+				table.add_row({p.first, p.second});
+			});
+			table.print(std::cout);
+		}
 	}
 }

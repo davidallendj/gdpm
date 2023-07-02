@@ -186,24 +186,24 @@ namespace gdpm::utils{
 		int verbose
 	){
 		constexpr const char *prog = "gpdm";
-		struct zip *za;
+		struct zip *zip;
 		struct zip_file *zf;
 		struct zip_stat sb;
 		char buf[100];
 		int err;
 		int i, len, fd;
-		zip_uint64_t sum;	
+		zip_uint64_t sum;
 
 		// log::info_n("Extracting package contents to '{}'...", dest);
 		log::info_n("Extracting package contents...");
-		if((za = zip_open(archive, 0, &err)) == nullptr){
+		if((zip = zip_open(archive, 0, &err)) == nullptr){
 			zip_error_to_str(buf, sizeof(buf), err, errno);
 			log::error("{}: can't open zip archive {}: {}", prog, archive, buf);
 			return 1;
 		}
 
-		for(i = 0; i < zip_get_num_entries(za, 0); i++){
-			if(zip_stat_index(za, i, 0, &sb) == 0){
+		for(i = 0; i < zip_get_num_entries(zip, 0); i++){
+			if(zip_stat_index(zip, i, 0, &sb) == 0){
 				len = strlen(sb.name);
 				if(verbose > 1){
 					log::print("{}, ", sb.name);
@@ -215,7 +215,7 @@ namespace gdpm::utils{
 					// safe_create_dir(sb.name);
 					std::filesystem::create_directory(path);
 				} else {
-					zf = zip_fopen_index(za, i, 0);
+					zf = zip_fopen_index(zip, i, 0);
 					if(!zf){
 						log::error("extract_zip: zip_fopen_index() failed.");
 						return 100;
@@ -248,7 +248,7 @@ namespace gdpm::utils{
 			}
 		}
 
-		if(zip_close(za) == -1){
+		if(zip_close(zip) == -1){
 			log::error("{}: can't close zip archive '{}'", prog, archive);
 			return 1;
 		}

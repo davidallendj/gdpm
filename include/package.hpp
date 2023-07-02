@@ -116,6 +116,7 @@ namespace gdpm::package {
 
 	GDPM_DLL_EXPORT void print_list(const rapidjson::Document& json);
 	GDPM_DLL_EXPORT void print_list(const info_list& packages);
+	GDPM_DLL_EXPORT void print_table(const info_list& packages);
 	GDPM_DLL_EXPORT result_t<info_list> get_package_info(const opts_t& opts);
 	GDPM_DLL_EXPORT result_t<title_list> get_package_titles(const info_list& packages);
 	GDPM_DLL_EXPORT void clean_temporary(const config::context& config, const title_list& package_titles);
