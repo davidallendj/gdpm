@@ -22,6 +22,7 @@ namespace gdpm::config{
 		table = 1,
 	};
 
+
 	struct context{
 		string username;
 		string password;
@@ -44,6 +45,8 @@ namespace gdpm::config{
 		rest_api::request_params rest_api_params;
 	};
 
+	string from_style(const print_style& style);
+	print_style to_style(const string& s);
 	string to_json(const context& config, bool pretty_print = false);
 	error load(std::filesystem::path path, context& config);
 	error save(std::filesystem::path path, const context& config);

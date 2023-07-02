@@ -15,7 +15,6 @@ namespace gdpm::http{
 		curl = curl_easy_init();
 	}
 
-
 	context::~context(){
 		curl_global_cleanup();
 		curl_easy_cleanup(curl);

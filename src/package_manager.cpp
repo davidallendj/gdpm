@@ -21,7 +21,6 @@
 #include <fmt/printf.h>
 #include <rapidjson/document.h>
 #include <cxxopts.hpp>
-#include "clipp.h"
 #include "argparse/argparse.hpp"
 
 #include <rapidjson/ostreamwrapper.h>
@@ -43,13 +42,7 @@ namespace gdpm::package_manager{
 	config::context config;
 	action_e 		action;
 
-	// opts_t opts;
-	bool skip_prompt 	= false;
-	bool clean_tmp_dir 	= false;
-	int priority 		= -1;
-
 	error initialize(int argc, char **argv){
-		// curl_global_init(CURL_GLOBAL_ALL);
 		curl 		= curl_easy_init();
 		config 		= config::make_context();
 		action 		= action_e::none;
@@ -60,15 +53,13 @@ namespace gdpm::package_manager{
 		}
 		error error = config::load(config.path, config);
 		if(error.has_occurred()){
-			log::error(error);
-			return error;
+			return log::error_rc(error);
 		}
 
 		/* Create the local databases if it doesn't exist already */
 		error = cache::create_package_database();
 		if(error.has_occurred()){
-			log::error(error);
-			return error;
+			return log::error_rc(error);
 		}
 
 		return error;
@@ -80,6 +71,7 @@ namespace gdpm::package_manager{
 		error error = config::save(config.path, config);
 		return error;
 	}
+
 
 	template <typename T, typename String = string>
 	auto set_if_used(
@@ -93,9 +85,10 @@ namespace gdpm::package_manager{
 		}
 	};
 
+
 	string_list get_values_from_parser(
 		const argparse::ArgumentParser& cmd,
-		const std::string& arg = "packages"
+		const string& arg = "packages"
 	){
 		if(cmd.is_used(arg))
 			return cmd.get<string_list>(arg);
@@ -104,7 +97,6 @@ namespace gdpm::package_manager{
 
 
 	error parse_arguments(int argc, char **argv){
-		using namespace clipp;
 		using namespace argparse;
 
 		/* Replace cxxopts with clipp */
@@ -140,10 +132,11 @@ namespace gdpm::package_manager{
 		program.add_description("Manage Godot engine assets from CLI");
 		program.add_argument("-v", "--verbose")
 			.action([&](const auto&){ config.verbose += 1; })
+			.append()
 			.default_value(false)
 			.implicit_value(true)
 			.help("set verbosity level")		
-			.nargs(0);
+			.nargs(nargs_pattern::optional);
 
 		install_command.add_description("install package(s)");
 		install_command.add_argument("packages")
@@ -321,7 +314,6 @@ namespace gdpm::package_manager{
 			.help("set how to print output")
 				.nargs(1)
 				.default_value("list");
-		
 		
 		config_set.add_description("set config property");
 		config_set.add_argument("property")

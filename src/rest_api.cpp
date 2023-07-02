@@ -14,6 +14,7 @@
 #include <curlpp/Easy.hpp>
 #include <curlpp/Options.hpp>
 #include <curlpp/Exception.hpp>
+
 namespace gdpm::rest_api{
 	
 	request_params make_from_config(const config::context& config){
@@ -26,7 +27,6 @@ namespace gdpm::rest_api{
 		type_e 			type, 
 		int 			category, 
 		support_e 		support, 
-		const string& 	filter, 
 		const string& 	user, 
 		const string& 	godot_version, 
 		int 			max_results, 
@@ -39,7 +39,6 @@ namespace gdpm::rest_api{
 			.type 			= type,
 			.category 		= category,
 			.support 		= support,
-			.filter 		= filter,
 			.user 			= user,
 			.godot_version 	= godot_version,
 			.max_results 	= max_results,
@@ -81,7 +80,7 @@ namespace gdpm::rest_api{
 		PrettyWriter<StringBuffer> writer(buffer);
 		d.Accept(writer);
 		
-		if(verbose > 1)
+		if(verbose > log::INFO)
 			log::info("JSON Response: \n{}", buffer.GetString());
 		return d;
 	}
@@ -112,7 +111,6 @@ namespace gdpm::rest_api{
 	}
 
 	string to_string(sort_e sort){
-
 		string _s{"sort="};
 		switch(sort){
 			case none:		_s += "";			break;
@@ -125,15 +123,16 @@ namespace gdpm::rest_api{
 	}
 
 	string _prepare_request(
-		const string &url, 
-		const request_params &c
+		const string& url, 
+		const request_params &c,
+		const string& filter
 	){
 		string request_url{url};
 		request_url += to_string(static_cast<type_e>(c.type));
 		request_url += (c.category <= 0) ? "&category=" : "&category="+std::to_string(c.category);
 		request_url += "&" + to_string(static_cast<support_e>(c.support));
 		request_url += "&" + to_string(static_cast<sort_e>(c.sort));
-		request_url += (!c.filter.empty()) ? "&filter="+c.filter : "";
+		request_url += (!filter.empty()) ? "&filter="+filter : "";
 		request_url += (!c.godot_version.empty()) ? "&godot_version="+c.godot_version : "";
 		request_url += "&max_results=" + std::to_string(c.max_results);
 		request_url += "&page=" + std::to_string(c.page);
@@ -141,7 +140,7 @@ namespace gdpm::rest_api{
 		return request_url;
 	}
 
-	void _print_params(const request_params& params){
+	void _print_params(const request_params& params, const string& filter){
 		log::println("params: \n"
 			"\ttype: {}\n"
 			"\tcategory: {}\n"
@@ -152,7 +151,7 @@ namespace gdpm::rest_api{
 			params.type,
 			params.category,
 			params.support,
-			params.filter, 
+			filter, 
 			params.godot_version,
 			params.max_results
 		);
@@ -190,7 +189,6 @@ namespace gdpm::rest_api{
 			.type 			= type,
 			.category 		= category,
 			.support 		= support,
-			.filter 		= filter,
 			.user 			= user,
 			.godot_version 	= godot_version,
 			.max_results 	= max_results,
@@ -204,35 +202,37 @@ namespace gdpm::rest_api{
 
 	rapidjson::Document get_assets_list(
 		const string& url, 
-		const request_params& c
+		const request_params& c,
+		const string& filter
 	){
 		http::context http;
 		http::request_params http_params;
-		http_params.headers.insert(http::header("Accept", "*/*"));
-		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Connection", "keep-alive"));
-		string request_url = _prepare_request(url, c);
+		// http_params.headers.insert(http::header("Accept", "*/*"));
+		// http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		// http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		// http_params.headers.insert(http::header("Connection", "keep-alive"));
+		string request_url = _prepare_request(url, c, http.url_escape(filter));
 		http::response r = http.request_get(request_url, http_params);
 		if(c.verbose >= log::INFO)
 			log::info("get_asset().URL: {}", request_url);
 		return _parse_json(r.body, c.verbose);
 	}
 
+
 	rapidjson::Document get_asset(
 		const string& url, 
 		int asset_id, 
-		const rest_api::request_params& api_params
+		const rest_api::request_params& api_params,
+		const string& filter
 	){
 		/* Set up HTTP request */
 		http::context http;
 		http::request_params http_params;
-		http_params.headers.insert(http::header("Accept", "*/*"));
-		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Connection", "keep-alive"));
-
-		string request_url = utils::replace_all(_prepare_request(url, api_params), "{id}", std::to_string(asset_id));
+		// http_params.headers.insert(http::header("Accept", "*/*"));
+		// http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		// http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		// http_params.headers.insert(http::header("Connection", "keep-alive"));
+		string request_url = utils::replace_all(_prepare_request(url, api_params, http.url_escape(filter)), "{id}", std::to_string(asset_id));
 		http::response r = http.request_get(request_url.c_str(), http_params);
 		if(api_params.verbose >= log::INFO)
 			log::info("get_asset().URL: {}", request_url);
@@ -240,13 +240,16 @@ namespace gdpm::rest_api{
 		return _parse_json(r.body);
 	}
 
+
 	bool delete_asset(int asset_id){
 		return false;
 	}
 
+
 	bool undelete_asset(int asset_id){
 		return false;
 	}
+
 
 	bool set_support_level(int asset_id){
 		return false;

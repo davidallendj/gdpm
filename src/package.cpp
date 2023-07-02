@@ -132,10 +132,10 @@ namespace gdpm::package{
 			if(is_missing_data){
 				doc = rest_api::get_asset(url, p.asset_id, rest_api_params);
 				if(doc.HasParseError() || doc.IsNull()){
-					const std::string message = std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()));
-					log::error(message);
-					
-					return error(constants::error::JSON_ERR, std::format("{}: {}", message, GetParseError_En(doc.GetParseError())));
+					return log::error_rc(error(
+						constants::error::JSON_ERR,
+						std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()))
+					));
 				}
 				p.category			= doc["category"].GetString();
 				p.description 		= doc["description"].GetString();
@@ -149,8 +149,8 @@ namespace gdpm::package{
 
 			/* Set directory and temp paths for storage */
 			package_dir = config.packages_dir + "/" + p.title;
-			tmp_dir = config.tmp_dir + "/" + p.title;
-			tmp_zip = tmp_dir + ".zip";
+			tmp_dir 	= config.tmp_dir + "/" + p.title;
+			tmp_zip 	= tmp_dir + ".zip";
 
 			/* Make directories for packages if they don't exist to keep everything organized */
 			if(!std::filesystem::exists(config.tmp_dir))
@@ -179,12 +179,10 @@ namespace gdpm::package{
 				if(response.code == http::OK){
 					log::println("Done.");
 				}else{
-					error error(
+					return log::error_rc(error(
 						constants::error::HTTP_RESPONSE_ERR,
 						std::format("HTTP Error: {}", response.code)
-					);
-					log::error(error);
-					return error;
+					));
 				}
 			}
 
@@ -195,7 +193,13 @@ namespace gdpm::package{
 
 			/* Extract all the downloaded packages to their appropriate directory location. */
 			for(const auto& p : dir_pairs){
-				int error_code = utils::extract_zip(p.first.c_str(), p.second.c_str());
+				int ec = utils::extract_zip(p.first.c_str(), p.second.c_str());
+				if(ec){
+					log::error_rc(error(
+						constants::error::LIBZIP_ERR,
+						std::format("libzip returned an error code {}", ec)
+					));
+				}
 			}
 
 			/* Update the cache data with information from  */
@@ -359,8 +363,7 @@ namespace gdpm::package{
 		/* If no package titles provided, update everything and then exit */
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		if(package_titles.empty()){
-			std::string url{constants::HostUrl};
-			url += rest_api::endpoints::GET_AssetId;
+			string url{constants::HostUrl + rest_api::endpoints::GET_AssetId};
 			Document doc = rest_api::get_assets_list(url, rest_api_params);
 			if(doc.IsNull()){
 				constexpr const char *message = "Could not get response from server. Aborting.";
@@ -371,7 +374,7 @@ namespace gdpm::package{
 		}
 
 		/* Fetch remote asset data and compare to see if there are package updates */
-		std::vector<std::string> p_updates = {};
+		package::title_list p_updates = {};
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
 		package::info_list p_cache = r_cache.unwrap_unsafe();
 
@@ -382,10 +385,9 @@ namespace gdpm::package{
 
 		/* Check version information to see if packages need updates */
 		for(const auto& p : p_cache){
-			std::string url{constants::HostUrl};
-			url += rest_api::endpoints::GET_AssetId;
+			string url{constants::HostUrl + rest_api::endpoints::GET_AssetId};
 			Document doc = rest_api::get_asset(url, p.asset_id);
-			std::string remote_version = doc["version"].GetString();
+			string remote_version = doc["version"].GetString();
 			if(p.version != remote_version){
 				p_updates.emplace_back(p.title);
 			}
@@ -412,7 +414,6 @@ namespace gdpm::package{
 	){
 		result_t r_cache = cache::get_package_info_by_title(package_titles);
 		info_list p_cache = r_cache.unwrap_unsafe();
-		http::context http;
 		
 		if(!p_cache.empty() && !config.enable_sync){
 			print_list(p_cache);
@@ -422,20 +423,14 @@ namespace gdpm::package{
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
 		for(const auto& p_title : package_titles){
 			using namespace rapidjson;
-
-			rest_api_params.filter = http.url_escape(p_title);
-
-			string request_url{constants::HostUrl};
-			request_url += rest_api::endpoints::GET_Asset;
-			Document doc = rest_api::get_assets_list(request_url, rest_api_params);
+			string request_url{constants::HostUrl + rest_api::endpoints::GET_Asset};
+			Document doc = rest_api::get_assets_list(request_url, rest_api_params, p_title);
 			if(doc.IsNull()){
 				return log::error_rc(error(
 					constants::error::HOST_UNREACHABLE,
-					"Could not fetch metadata."
+					"Could not fetch metadata. Aborting."
 				));
 			}
-
-			// log::info("{} package(s) found...", doc["total_items"].GetInt());
 			print_list(doc);
 		}
 		return error();

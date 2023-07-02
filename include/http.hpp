@@ -75,8 +75,8 @@ namespace gdpm::http{
 		LOOP_DETECTED 					= 508,
 		NOT_EXTENDED 					= 510,
 		NETWORK_AUTHENTICATION_REQUIRED = 511
-
 	};
+
 	struct response{
 		long code = 0;
 		string body{};

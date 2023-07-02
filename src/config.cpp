@@ -34,6 +34,18 @@
 
 namespace gdpm::config{
 	context config;
+
+	string from_style(const print_style& style){
+		if(style == print_style::list)			return "list";
+		else if(style == print_style::table) 	return "table";
+		return "list";
+	}
+
+	print_style to_style(const string& s){
+		if(s == "list") 		return print_style::list;
+		else if(s == "table") 	return print_style::table;
+		else					return print_style::list;
+	}
 	
 	string to_json(
 		const context& config, 
@@ -252,6 +264,8 @@ namespace gdpm::config{
 		else if(property == "skip-prompt")			config.skip_prompt		= utils::to_bool(value);
 		else if(property == "enable-file-logging")	config.enable_file_logging	= utils::to_bool(value);
 		else if(property == "clean-temporary")		config.clean_temporary	= utils::to_bool(value);
+		else if(property == "verbosity")			config.verbose			= std::stoi(value);
+		else if(property == "style")				config.style			= to_style(value);
 		else{
 			return log::error_rc(error(
 				constants::error::INVALID_CONFIG,
@@ -271,7 +285,18 @@ namespace gdpm::config{
 		else if(property == "password")		return config.password;
 		else if(property == "path")			return config.path;
 		else if(property == "token")		return config.token;
-		else if(property == "package_dir") 	return config.packages_dir;
+		else if(property == "package-dir") 	return config.packages_dir;
+		else if(property == "tmp-dir")		return config.tmp_dir;
+		else if(property == "remote-sources") return utils::join(config.remote_sources);
+		else if(property == "jobs")			return config.jobs;
+		else if(property == "timeout")		return config.timeout;
+		else if(property == "sync")			return config.enable_sync;
+		else if(property == "cache")		return config.enable_cache;
+		else if(property == "skip-prompt")	return config.skip_prompt;
+		else if(property == "file-logging") return config.enable_file_logging;
+		else if(property == "clean-temporary") return config.clean_temporary;
+		else if(property == "verbosity")	return config.verbose;
+		else if(property == "style")		return from_style(config.style);
 	}
 
 	context make_context(
@@ -354,6 +379,7 @@ namespace gdpm::config{
 		else if(property == "logging") 			log::println("enable file logging: {}", config.enable_file_logging);
 		else if(property == "clean") 			log::println("clean temporary files: {}", config.clean_temporary);
 		else if(property == "verbose") 			log::println("verbose: {}", config.verbose);
+		else if(property == "style") 			log::println("style: {}", from_style(config.style));
 	}
 
 
@@ -378,6 +404,7 @@ namespace gdpm::config{
 		else if(property == "logging") 			table.add_row({"File Logging", std::to_string(config.enable_file_logging)});
 		else if(property == "clean") 			table.add_row({"Clean Temporary", std::to_string(config.clean_temporary)});
 		else if(property == "verbose") 			table.add_row({"Verbosity", std::to_string(config.verbose)});
+		else if(property == "style") 			table.add_row({"Verbosity", from_style(config.style)});
 	}
 
 	void print_properties(
@@ -403,6 +430,7 @@ namespace gdpm::config{
 				_print_property(config, "logging");
 				_print_property(config, "clean");
 				_print_property(config, "verbose");
+				_print_property(config, "style");
 			}
 			else {
 				std::for_each(
@@ -432,6 +460,7 @@ namespace gdpm::config{
 				table.add_row({"Logging", std::to_string(config.enable_file_logging)});
 				table.add_row({"Clean", std::to_string(config.clean_temporary)});
 				table.add_row({"Verbosity", std::to_string(config.verbose)});
+				table.add_row({"Style", from_style(config.style)});
 			}
 			else{
 				std::for_each(

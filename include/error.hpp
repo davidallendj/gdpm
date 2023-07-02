@@ -33,6 +33,8 @@ namespace gdpm::constants::error{
 		INVALID_KEY,
 		HTTP_RESPONSE_ERR,
 		SQLITE_ERR,
+		LIBZIP_ERR,
+		LIBCURL_ERR,
 		JSON_ERR,
 		STD_ERR
 	};
