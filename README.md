@@ -264,7 +264,7 @@ gdpm --verbose search "GodotNetworking" \
 	--sort updated \
 	--type project \
 	--max-results 50 \
-	--godot-version 3.4 \
+	--godot-version 4.0 \
 	--author godot \
 	--support official
 ```
@@ -324,25 +324,26 @@ gdpm config set username towk
 
 ## Planned Features
 
-*   [ ] Godot 4 Asset Library compatibility.
+- [x] Godot 4 Asset Library compatibility.
 
-*   [ ] Multithreaded support.
+- [ ] PKGBUILD for ArchLinux/Manjaro
 
-*   [ ] Dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
+- [ ] Multithreaded downloading.
 
-*   [ ] Proper updating mechanism.
+- [ ] Proper updating.
 
-*   [ ] Plugin integration into the editor.
+- [ ] Editor plugin (...maybe?...).
 
-*   [ ] Complete integration with the Asset API including moderation tools.
+- [ ] Complete Asset API including `auth`.
 
-*   [ ] Login and register for access to repositories.
+- [ ] Support for paid assets.
 
-*   [ ] Support for paid assets.
+- [ ] Adapted to new Asset API.
 
+- [ ] Experimental dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
 ## Known Issues
 
-*   The code is currently changing so new issues will pop up often.
+*   The code is currently still changing so API is unstable.
 
 *   Logging doesn't write to file.
 
