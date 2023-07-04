@@ -398,12 +398,12 @@ namespace gdpm::package_manager{
 			set_if_used(install_command, config.timeout, "timeout");
 		}
 		else if(program.is_subcommand_used(get_command)){
-			action = action_e::add;
+			action = action_e::get;
 			package_titles = get_values_from_parser(get_command);
 			set_if_used(get_command, params.remote_source, "remote");
 			set_if_used(get_command, config.jobs, "jobs");
 			set_if_used(get_command, config.skip_prompt, "skip-prompt");
-			set_if_used(get_command, params.input_files, "files");
+			set_if_used(get_command, params.input_files, "file");
 		}
 		else if(program.is_subcommand_used(remove_command)){
 			action = action_e::remove;
@@ -545,7 +545,7 @@ namespace gdpm::package_manager{
 
 		switch(action){
 			case action_e::install: 		package::install(config, package_titles, params); break;
-			case action_e::add:				package::get(config, package_titles, params);
+			case action_e::get:				package::get(config, package_titles, params); break;
 			case action_e::remove: 			package::remove(config, package_titles, params); break;
 			case action_e::update:			package::update(config, package_titles, params); break;
 			case action_e::search: 			package::search(config, package_titles, params); break;

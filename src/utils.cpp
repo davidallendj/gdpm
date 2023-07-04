@@ -390,6 +390,7 @@ namespace gdpm::utils{
 			if(total_download != 0){
 				// double percent = std::floor((current_downloaded / (total_download)) * 100);
 				bar.set_option(option::MaxProgress{total_download});
+				// bar.set_option(option::HideBarWhenComplete{false});
 				bar.set_progress(current_downloaded);
 				bar.set_option(option::PostfixText{
 						convert_size(current_downloaded) + " / " + 
@@ -401,8 +402,8 @@ namespace gdpm::utils{
 				}
 			} else {
 				if(bar_unknown.is_completed()){
-					bar.set_option(option::PrefixText{"Download completed."});
-					bar.mark_as_completed();
+					bar_unknown.set_option(option::PrefixText{"Download completed."});
+					bar_unknown.mark_as_completed();
 				} else {
 					bar.tick();
 					bar_unknown.set_option(

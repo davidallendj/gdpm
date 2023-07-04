@@ -22,7 +22,7 @@ namespace gdpm::package_manager {
 
 	enum class action_e{ 
 		install, 
-		add, 
+		get, 
 		remove, 
 		update, 
 		search, 

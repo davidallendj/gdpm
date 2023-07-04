@@ -10,6 +10,7 @@
 #include "remote.hpp"
 #include "types.hpp"
 #include "utils.hpp"
+#include <filesystem>
 #include <functional>
 #include <future>
 #include <rapidjson/error/en.h>
@@ -40,43 +41,21 @@ namespace gdpm::package{
 		*/
 
 		/* Append files from --file option */
-		read_file(package_titles, params.input_files);
+		read_file_inputs(package_titles, params.input_files);
 		
 		result_t result = cache::get_package_info_by_title(package_titles);
-		package::info_list p_found = {};
 		package::info_list p_cache = result.unwrap_unsafe();
 
 		/* Synchronize database information and then try to get data again from
 		cache if possible. */
-		if(config.enable_sync){
-			if(p_cache.empty()){
-				result_t result = synchronize_database(config, package_titles);
-				p_cache = result.unwrap_unsafe();
-			}
+		if(config.enable_sync || p_cache.empty()){
+			result_t result = synchronize_database(config, package_titles);
+			p_cache = result.unwrap_unsafe();
 		}
-
 
 		/* Match queried package titles with those found in cache. */
-		log::debug("Searching for packages in cache...");
-		for(const auto& p_title : package_titles){
-			auto found = std::find_if(
-				p_cache.begin(), 
-				p_cache.end(), 
-				[&p_title](const package::info& p){ 
-					return p.title == p_title; 
-				}
-			);
-			if(found != p_cache.end()){
-				p_found.emplace_back(*found);
-			}
-		}
+		package::info_list p_found = find_cached_packages(package_titles);
 
-		/* If size of package_titles == p_found, then all packages can be installed
-		from cache and there's no need to query remote API. However, this will
-		only installed the latest *local* version and will not sync with remote. 
-		
-		FIXME: This needs to also check if it is installed as well.
-		*/
 		// if(p_found.size() == package_titles.size()){
 		// 	log::info("Found all packages stored in local cache.");
 		// }
@@ -107,7 +86,7 @@ namespace gdpm::package{
 		if(!config.remote_sources.contains(params.remote_source)){
 			error error(
 				constants::error::NOT_FOUND,
-				"Remote resource not found in config."
+				"Remote source not found in config."
 			);
 			log::error(error);
 			return error;
@@ -228,8 +207,136 @@ namespace gdpm::package{
 		title_list& package_titles,
 		const params& params
 	){
-		/* Install packages in local project instead of package database.
-		This will not cache the package information in the cache database. */
+		using namespace rapidjson;
+
+		/* Download and install package(s) in local project without storing
+		package info in the package database. This will check for packages stored
+		in local cache first. */
+		result_t result = cache::get_package_info_by_title(package_titles);
+		package::info_list p_found = {};
+		package::info_list p_cache = result.unwrap_unsafe();
+		log::debug("Searching for packages in cache...");
+		for(const auto& p_title : package_titles){
+			auto found = std::find_if(
+				p_cache.begin(), 
+				p_cache.end(), 
+				[&p_title](const package::info& p){ 
+					return p.title == p_title; 
+				}
+			);
+			if(found != p_cache.end()){
+				p_found.emplace_back(*found);
+			}
+		}
+
+		/* Install the ones found from cache first. */
+
+		/* Check if provided param is in remote sources*/
+		if(!config.remote_sources.contains(params.remote_source)){
+			error error(
+				constants::error::NOT_FOUND,
+				"Remote source not found in config."
+			);
+			log::error(error);
+			return error;
+		}
+
+		/* Install the other packages from remte source. */
+		std::vector<string_pair> dir_pairs;
+		task_list tasks;
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
+		for(auto& p : p_found){	// TODO: Execute each in parallel using coroutines??
+
+			/* Check if a remote source was provided. If not, then try to get packages
+			in global storage location only. */
+
+			log::info("Fetching asset data for \"{}\"...", p.title);
+			string url{config.remote_sources.at(params.remote_source) + rest_api::endpoints::GET_AssetId};
+			string package_dir, tmp_dir, tmp_zip;
+
+			/* Retrieve necessary asset data if it was found already in cache */
+			Document doc;
+			bool is_missing_data = p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty();
+			if(is_missing_data){
+				doc = rest_api::get_asset(url, p.asset_id, rest_api_params);
+				if(doc.HasParseError() || doc.IsNull()){
+					return log::error_rc(error(
+						constants::error::JSON_ERR,
+						std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()))
+					));
+				}
+				p.category			= doc["category"].GetString();
+				p.description 		= doc["description"].GetString();
+				p.support_level 	= doc["support_level"].GetString();
+				p.download_url 		= doc["download_url"].GetString();
+				p.download_hash 	= doc["download_hash"].GetString();
+			}
+			else{
+				log::info("Found asset data found for \"{}\"", p.title);
+			}
+
+			/* Set directory and temp paths for storage */
+			package_dir = std::filesystem::current_path().string() + "/" + p.title;//config.packages_dir + "/" + p.title;
+			tmp_dir 	= std::filesystem::current_path().string() + "/" + p.title + ".tmp";
+			tmp_zip 	= tmp_dir + ".zip";
+
+			/* Make directories for packages if they don't exist to keep everything organized */
+			if(!std::filesystem::exists(config.tmp_dir))
+				std::filesystem::create_directories(config.tmp_dir);
+			if(!std::filesystem::exists(config.packages_dir))
+				std::filesystem::create_directories(config.packages_dir);
+
+			/* Dump asset information for lookup into JSON in package directory */
+			if(!std::filesystem::exists(package_dir))
+				std::filesystem::create_directory(package_dir);
+
+			std::ofstream ofs(package_dir + "/asset.json");
+			OStreamWrapper osw(ofs);
+			PrettyWriter<OStreamWrapper> writer(osw);
+			doc.Accept(writer);
+
+			/* Check if we already have a stored temporary file before attempting to download */
+			if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
+				log::info("Found cached package. Skipping download.", p.title);
+			}
+			else{
+				/* Download all the package files and place them in tmp directory. */
+				log::info_n("Downloading \"{}\"...", p.title);
+				http::context http;
+				http::response response = http.download_file(p.download_url, tmp_zip);
+				if(response.code == http::OK){
+					log::println("Done.");
+				}else{
+					return log::error_rc(error(
+						constants::error::HTTP_RESPONSE_ERR,
+						std::format("HTTP Error: {}", response.code)
+					));
+				}
+			}
+
+			dir_pairs.emplace_back(string_pair(tmp_zip, package_dir + "/"));
+
+			p.is_installed = true;
+			p.install_path = package_dir;
+
+			/* Extract all the downloaded packages to their appropriate directory location. */
+			for(const auto& p : dir_pairs){
+				int ec = utils::extract_zip(p.first.c_str(), p.second.c_str());
+				if(ec){
+					log::error_rc(error(
+						constants::error::LIBZIP_ERR,
+						std::format("libzip returned an error code {}", ec)
+					));
+				}
+			}
+
+			/* Remove temporary download archive */
+			for(const auto& p : p_found){
+				string tmp_zip = std::filesystem::current_path().string() 
+					+ "/" + p.title + ".tmp.zip";
+				std::filesystem::remove_all(tmp_zip);
+			}
+		}
 		return error();
 	}
 
@@ -244,7 +351,7 @@ namespace gdpm::package{
 
 
 		/* Append package titles from --file option */
-		read_file(package_titles, params.input_files);
+		read_file_inputs(package_titles, params.input_files);
 
 		/* Find the packages to remove if they're is_installed and show them to the user */
 		result_t result = cache::get_package_info_by_title(package_titles);
@@ -405,8 +512,6 @@ namespace gdpm::package{
 		}
 		return error();
 	}
-
-	
 
 
 	error search(
@@ -610,12 +715,10 @@ namespace gdpm::package{
 		}
 
 		if(p_found.empty()){
-			error error(
+			return log::error_rc(error(
 				constants::error::NO_PACKAGE_FOUND,
 				"No packages found to clone."
-			);
-			log::error(error);
-			return error;
+			));
 		}
 
 		/* Get the storage paths for all packages to create clones */
@@ -657,6 +760,7 @@ namespace gdpm::package{
 		}
 	}
 
+
 	void print_list(const rapidjson::Document& json){
 		for(const auto& o : json["result"].GetArray()){
 			log::println(
@@ -678,6 +782,7 @@ namespace gdpm::package{
 			);
 		}
 	}
+
 
 	void print_table(const info_list& packages){
 		using namespace tabulate;
@@ -756,7 +861,7 @@ namespace gdpm::package{
 		const title_list& package_titles
 	){
 		if(package_titles.empty()){
-			log::info("Cleaned all temporary files.");
+			log::info("No temporary files found to clean.");
 			std::filesystem::remove_all(config.tmp_dir);
 		}
 		/* Find the path of each packages is_installed then delete temporaries */
@@ -778,17 +883,6 @@ namespace gdpm::package{
 		T& p
 	){
 		if(o.count(k)){ p = std::get<T>(o.at(k)); }
-	}
-
-	params make_params(
-		const var_args& args, 
-		const var_opts& opts
-	){
-		params p;
-		set_if_key_exists(opts, "remote-source", p.remote_source);
-		// set_if_key_exists(opts, "install-method", p.install_method);
-
-		return p;
 	}
 
 
@@ -899,7 +993,8 @@ namespace gdpm::package{
 		return result_t(p_deps, error());
 	}
 
-	void read_file(
+
+	void read_file_inputs(
 		title_list& package_titles,
 		const path_list& paths
 	){
@@ -913,6 +1008,52 @@ namespace gdpm::package{
 			);
 		}
 	}
+
+	info_list find_cached_packages(const title_list& package_titles){
+		/* Download and install package(s) in local project without storing
+		package info in the package database. This will check for packages stored
+		in local cache first. */
+		result_t result = cache::get_package_info_by_title(package_titles);
+		package::info_list p_found = {};
+		package::info_list p_cache = result.unwrap_unsafe();
+		log::debug("Searching for packages in cache...");
+		for(const auto& p_title : package_titles){
+			auto found = std::find_if(
+				p_cache.begin(), 
+				p_cache.end(), 
+				[&p_title](const package::info& p){ 
+					return p.title == p_title; 
+				}
+			);
+			if(found != p_cache.end()){
+				p_found.emplace_back(*found);
+			}
+		}
+		return p_found;
+	}
+
+	
+	info_list find_installed_packages(const title_list& package_titles){
+		result_t result = cache::get_package_info_by_title(package_titles);
+		package::info_list p_installed = {};
+		package::info_list p_cache = result.unwrap_unsafe();
+		log::debug("Searching for installed packages in cache...");
+		for(const auto& p_title : package_titles){
+			auto found = std::find_if(
+				p_cache.begin(), 
+				p_cache.end(), 
+				[&p_title](const package::info& p){ 
+					return p.title == p_title && p.is_installed; 
+				}
+			);
+			if(found != p_cache.end()){
+				p_installed.emplace_back(*found);
+			}
+		}
+
+		return p_installed;
+	}
+
 
 	string to_json(
 		const info& info, 

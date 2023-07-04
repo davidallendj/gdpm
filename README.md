@@ -43,21 +43,21 @@ Use `gdpm help` to see full list of commands.
 
 ```bash
 $ gdpm help
-Usage: gdpm [--help] [--verbose] {get,clean,clone,config,export,fetch,help,install,link,list,remote,remove,search,ui,update,version}
+Usage: gdpm [--help] [--verbose VAR] {clean,clone,config,export,fetch,get,help,install,link,list,remote,remove,search,ui,update,version}
 
 Manage Godot engine assets from CLI
 
 Optional arguments:
   -h, --help    shows help message and exits 
-  -v, --verbose set verbosity level 
+  -v, --verbose set verbosity level [nargs=0..1] [default: false]
 
 Subcommands:
-  get           add package to project
   clean         clean package(s) temporary files
   clone         clone package(s) to path
   config        manage config properties
   export        export install package(s) list
   fetch         fetch and sync asset data
+  get           add package to project
   help          show help message and exit
   install       install package(s)
   link          link package(s) to path
@@ -80,7 +80,7 @@ Currently, there is no dependency management as it is not needed yet. There are 
 
 ## How It Works
 
-GDPM is built to work with an instance of [Godot's Asset API](https://github.com/godotengine/godot-asset-library). When installing packages, GDPM will first make HTTP requests to retrieve required asset data to download the asset and sync it in with a local database. Then, it will make another API request to retrieve the rest of an asset's data, update it in the database, then download it from the remote repository. Unfortunately, the package manager requires at least 2 request for a single asset. Therefore, there's an intentional 200 ms delay by default between each request to not bombard the API server, but is configurable at compile time (see "[Building from Source](#building-from-source)" section below).
+GDPM is built to work with an instance of [Godot's Asset API](https://github.com/godotengine/godot-asset-library). When installing packages, GDPM will first make HTTP requests to retrieve required asset data to download the asset and sync it in with a local database. Then, it will make another API request to retrieve the rest of an asset's data, update it in the database, then download it from the remote repository. Unfortunately, the package manager requires at least 2 request for a single asset. Therefore, there's an intentional 200 ms delay by default between each request to not bombard the API server, but is configurable at compile time (see `[Building from Source](#building-from-source)` section below).
 
 When removing a package, the unzip files are remove but the temporary files are keep in the specified `.tmp` directory unless using the `--clean` option. This allows the user to remove the uncompressed files, but easily reinstall the package without having to download it remotely again.
 
