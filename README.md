@@ -216,42 +216,52 @@ The `gdpm` command takes a single subcommand argument such as `install`, `remove
 
 Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command.
 
-Installation behavior can be adjusted using other flags like `--disable-sync`, `--disable-cache`, `-y/--skip-prompt`, or `--clean`.
+Installation behavior can be adjusted using other flags like `--sync=disable`, `--cache=disable`, `-y/--skip-prompt`, or `--clean`. Use the `-j/--jobs` flag to download multiple packages in parallel.
 
 ```bash
-gdpm install "Flappy Godot" "GodotNetworking" -y
-gdpm install -f packages.txt --config config.json --disable-sync --skip-prompt --verbose
+$ gdpm install "Flappy Godot" GodotNetworking -y
+$ gdpm install -f packages.txt --config config.json --sync=disable --skip-prompt --verbose
+$ gdpm install XDateTime "Line Renderer" "Dev Blocks" Vpainter --jobs 4
 
-gdpm export path/to/packages.txt
-gdpm install -f path/to/packages.txt --disable-sync --skip-prompt
+$ gdpm export path/to/packages.txt
+$ gdpm install -f path/to/packages.txt --sync=disable --skip-prompt
+```
 
-# Future work for multithreading support...
-# gdpm install -f path/to/packages.txt -j$(nproc) --disable-sync --skip-prompt --verbose
+If you leave out the `--skip-prompt` flag, hit enter to install by default.
+
+```bash
+$ gdpm install XDateTime "Line Renderer" "Dev Blocks" Vpainter --jobs 4
+Title          Author    Category  Version  Godot  Last Modified        Installed? 
+ XDateTime      XD        Tools        1      4.0   2021-05-31 16:02:25    ✔️   
+ Line Renderer  LemiSt24  3D Tools     1      4.0   2022-06-09 16:40:44    ✔️   
+ Dev Blocks     Manonox   Misc         1      4.0   2022-08-15 00:27:08    ✔️   
+ Vpainter       NX7R      3D Tools     1      4.0   2022-06-25 19:41:56    ✔️   
+Do you want to install these packages? (Y/n) n
 ```
 
 Packages can be removed similiarly to installing.
 
 ```bash
-gdpm remove "Flappy Godot" GodotNetworking -y
-gdpm remove -f packages.txt --config config.json --disable-sync --skip-prompt
+$ gdpm remove "Flappy Godot" GodotNetworking -y
+$ gdpm remove -f packages.txt --config config.json --sync=disable --skip-prompt
 ```
 
 Update packages by either specific packages or update everything installed at once. The local asset data with automatically be updated as well. 
 
 ```bash
-gdpm update GodotNetworking
-gdpm update -f packages.txt
-gdpm update						# Updates everything installed
-gdpm fetch						# Updates local asset data
+$ gdpm update GodotNetworking
+$ gdpm update -f packages.txt
+$ gdpm update						# Updates everything installed
+$ gdpm fetch						# Updates local asset data
 ```
 
 Print a list installed packages using the `list` command. This also provides some other extra information like the Godot version and license. You can also list the remote sources using the 'remote' option. Alternatively, a list of remotes can be printed using the `remote` command alone.
 
 ```bash
-gdpm list --style=table
-gdpm list packages				# Equivalent to `gdpm list`
-gdpm list remote				# Equivalent to `gdpm remote`
-gdpm remote list --style=table	# Equivalent to `gdpm list`
+$ gdpm list --style=table
+$ gdpm list packages				# Equivalent to `gdpm list`
+$ gdpm list remote				# Equivalent to `gdpm remote`
+$ gdpm remote list --style=table	# Equivalent to `gdpm list`
 ```
 
 ### Searching
@@ -260,7 +270,7 @@ Search for available packages using the `search` command. The results can be twe
 
 Use the `search` command to find a list of available packages. (Note: This currently will only search remotely for package information! This will be changed later to only search the local metadata instead.)
 ```bash
-gdpm --verbose search "GodotNetworking" \ 
+$ gdpm --verbose search "GodotNetworking" \ 
 	--sort updated \
 	--type project \
 	--max-results 50 \
@@ -274,8 +284,8 @@ gdpm --verbose search "GodotNetworking" \
 Link an installed package using the `link` command or make copy of it using `clone`.
 
 ```bash
-gdpm link GodotNetworking tests/test-godot-project
-gdpm clone GodotNetworking tests/tests-godot-project/addons
+$ gdpm link GodotNetworking tests/test-godot-project
+$ gdpm clone GodotNetworking tests/tests-godot-project/addons
 
 # Future work
 # gdpm link --all    # links all installed packages to current directory
@@ -287,10 +297,10 @@ gdpm clone GodotNetworking tests/tests-godot-project/addons
 Temporary files downloaded from remote repositories can be cleaned by using the `gdpm clean` command or the `--clean` flag after installing or removing packages. Cleaning is recommended if space is limited, but keeping the files stored reduces the number of remote requests needed to synchronize the local asset database with the Asset library.
 
 ```bash
-gdpm install -f packages.txt --clean -y		# install and discard temps
-gdpm remove -f packages.txt --clean -y		# remove and delete temps
-gdpm clean "GodotNetworking"				# clean for one package
-gdpm clean									# clean all packages
+$ gdpm install -f packages.txt --clean -y		# install and discard temps
+$ gdpm remove -f packages.txt --clean -y		# remove and delete temps
+$ gdpm clean "GodotNetworking"				# clean for one package
+$ gdpm clean									# clean all packages
 ```
 
 ### Managing Remote Sources
@@ -298,16 +308,16 @@ gdpm clean									# clean all packages
 Remote repositories can be added and removed similar to using `git`. Be aware that this API is still being changed and may not always work as expected.
 
 ```bash
-gdpm remote add official https://custom-assetlib/asset-library/api
-gdpm remote remove official
+$ gdpm remote add official https://custom-assetlib/asset-library/api
+$ gdpm remote remove official
 ```
 
 
 To try `gdpm` without installing it to your system, create a symlink to the built executable and add the `bin` directory to your PATH variable.
 
 ```bash
-ln -s path/to/build/gdpm path/to/bin/gdpm
-export PATH=$PATH:path/to/bin/gdpm
+$ ln -s path/to/build/gdpm path/to/bin/gdpm
+$ export PATH=$PATH:path/to/bin/gdpm
 ```
 
 ### Managing Configuration Properties
@@ -315,11 +325,11 @@ export PATH=$PATH:path/to/bin/gdpm
 Configuration properties can be viewed and set using the `gdpm config` command.
 
 ```bash
-gdpm config get						# shows all config properties
-gdpm config get --style=table		# shows all config properties in table
-gdpm config get skip-prompt jobs	# shows config properties listed
-gdpm config set timeout 30			# set config property value
-gdpm config set username towk
+$ gdpm config get						# shows all config properties
+$ gdpm config get --style=table		# shows all config properties in table
+$ gdpm config get skip-prompt jobs	# shows config properties listed
+$ gdpm config set timeout 30			# set config property value
+$ gdpm config set username towk
 ```
 
 ## Planned Features
