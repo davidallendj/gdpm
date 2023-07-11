@@ -29,15 +29,15 @@ namespace gdpm::cache{
 		namespace fs = std::filesystem;
 		fs::path dir_path = fs::path(params.cache_path).parent_path();
 		if(!fs::exists(dir_path)){
-			log::info("Creating cache directories...{}", params.cache_path);
+			log::debug("Creating cache directories...{}", params.cache_path);
 			fs::create_directories(dir_path);
 		}
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR,
+			error error(ec::SQLITE_ERR,
 				std::format(
-					"create_package_database.sqlite3_open(): {}",
+					"cache::create_package_database::sqlite3_open(): {}",
 					sqlite3_errmsg(db)
 				)
 			);
@@ -70,8 +70,8 @@ namespace gdpm::cache{
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
 			// log::error("Failed to fetch data: {}\n", sqlite3_errmsg(db));
-			error error(constants::error::SQLITE_ERR, std::format(
-				"create_package_database.sqlite3_exec(): {}", 
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::create_package_database::sqlite3_exec(): {}", 
 				errmsg
 			));
 			sqlite3_free(errmsg);
@@ -101,8 +101,8 @@ namespace gdpm::cache{
 		// log::println("{}", sql);
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"insert_package_info.sqlite3_open(): {}", 
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::insert_package_info::sqlite3_open(): {}", 
 				sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
@@ -110,10 +110,9 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
-					"insert_package_info.sqlite3_exec(): {}", errmsg
-			));
-			log::error(error);
+			error error = log::error_rc(ec::SQLITE_ERR,
+				std::format("cache::insert_package_info::sqlite3_exec(): {}", errmsg)
+			);
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
 			return error;
@@ -135,8 +134,6 @@ namespace gdpm::cache{
 		string sql{"BEGIN TRANSACTION;\n"};
 
 		auto callback = [](void *data, int argc, char **argv, char **colnames){
-			// log::error("{}", (const char*)data);
-			// p_data *_data = (p_data*)data;
 			package::info_list *_p_vector = (package::info_list*) data;
 			package::info p{
 				.asset_id 			= std::stoul(argv[1]),
@@ -163,8 +160,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"get_package_info_by_id.sqlite3_open(): {}", sqlite3_errmsg(db)
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::get_package_info_by_id::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
@@ -177,7 +174,7 @@ namespace gdpm::cache{
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
 			error error(constants::error::SQLITE_ERR, std::format(
-				"get_package_info_by_id.sqlite3_exec(): {}", errmsg
+				"cache::get_package_info_by_id::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
@@ -231,8 +228,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"get_package_info_by_title.sqlite3_open(): {}", sqlite3_errmsg(db)
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::get_package_info_by_title::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
@@ -246,8 +243,8 @@ namespace gdpm::cache{
 		// log::println(sql);
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"get_package_info_by_title.sqlite3_exec(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::get_package_info_by_title::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
@@ -292,8 +289,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"get_installed_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::get_installed_packages::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return result_t(package::info_list(), error);
@@ -302,8 +299,8 @@ namespace gdpm::cache{
 		sql += "SELECT * FROM " + params.table_name + " WHERE is_installed=1; COMMIT;";
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(rc, std::format(
-				"get_installed_packages.sqlite3_exec(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::get_installed_packages::sqlite3_exec(): {}", errmsg
 			));
 			log::error(error);
 			sqlite3_free(errmsg);
@@ -326,8 +323,8 @@ namespace gdpm::cache{
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
 			error error(
-				constants::error::SQLITE_ERR, std::format(
-				"update_package_info.sqlite3_open(): {}", sqlite3_errmsg(db)
+				ec::SQLITE_ERR, std::format(
+				"cache::update_package_info::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return error;
@@ -359,8 +356,8 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"update_package_info.sqlite3_exec(): {}\n\t{}", errmsg, sql
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::update_package_info::sqlite3_exec(): {}\n\t{}", errmsg, sql
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
@@ -382,8 +379,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"delete_packages.sqlite3_open(): {}", sqlite3_errmsg(db)
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::delete_packages::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return error;
@@ -395,8 +392,8 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"delete_packages.sqlite3_exec(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::delete_packages::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
@@ -418,8 +415,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"delete_packages.sqlite3_open(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::delete_packages::sqlite3_open(): {}", errmsg
 			));
 			sqlite3_close(db);
 			return error;
@@ -431,8 +428,8 @@ namespace gdpm::cache{
 		}
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"delete_packages.sqlite3_exec(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::delete_packages::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);
@@ -451,8 +448,8 @@ namespace gdpm::cache{
 
 		int rc = sqlite3_open(params.cache_path.c_str(), &db);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"drop_package_database.sqlite3_open(): {}", sqlite3_errmsg(db)
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::drop_package_database::sqlite3_open(): {}", sqlite3_errmsg(db)
 			));
 			sqlite3_close(db);
 			return error;
@@ -460,8 +457,8 @@ namespace gdpm::cache{
 		
 		rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
-				"drop_package_database.sqlite3_exec(): {}", errmsg
+			error error(ec::SQLITE_ERR, std::format(
+				"cache::drop_package_database::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);
 			sqlite3_close(db);

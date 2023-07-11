@@ -2,6 +2,7 @@
 
 #include "log.hpp"
 #include "types.hpp"
+#include "utils.hpp"
 #include <fmt/core.h>
 #include <new>
 #include <string>
@@ -15,11 +16,14 @@ namespace gdpm::constants::error{
 		UNKNOWN_COMMAND,
 		UNKNOWN_ARGUMENT,
 		ARGPARSE_ERROR,
+		ASSERTION_FAILED,
+		PRECONDITION_FAILED,
+		POSTCONDITION_FAILED,
 		NOT_FOUND,
 		NOT_DEFINED,
 		NOT_IMPLEMENTED,
 		NO_PACKAGE_FOUND,
-		PATH_NOT_DEFINED,
+		MALFORMED_PATH,
 		FILE_EXISTS,
 		FILE_NOT_FOUND,
 		DIRECTORY_EXISTS,
@@ -43,12 +47,17 @@ namespace gdpm::constants::error{
 		"",
 		"An unknown error has occurred.",
 		"Unknown command.",
+		"Unknown argument.",
+		"Could not parse argument.",
+		"Assertion condition failed.",
+		"Pre-condition failed.",
+		"Post-condition failed.",
 		"Resource not found.",
-		"Function not defined.",
-		"Function not implemented.",
+		"Resource not defined.",
+		"Resource not implemented.",
 		"No package found.",
-		"Path is not well-defined",
-		"File found.",
+		"Path is malformed.",
+		"File already exists",
 		"File does not exist.",
 		"Directory exists.",
 		"Directory not found.",
@@ -58,6 +67,10 @@ namespace gdpm::constants::error{
 		"Invalid configuration.",
 		"Invalid key.",
 		"An HTTP response error has occurred.",
+		"A SQLite error has occurred.",
+		"A libzip error has occurred.",
+		"A libcurl error has occurred.",
+		"A JSON error has occurred.",
 		"An error has occurred."
 	};
 
@@ -73,10 +86,12 @@ namespace gdpm::constants::error{
 }; 
 
 namespace gdpm{
+	namespace ec = constants::error;
 	class error {
 	public:
-		constexpr explicit error(int code = 0, const string& message = "{code}"):
-			m_code(code), m_message(message == "{code}" ? constants::error::get_message(code): message)
+		constexpr explicit error(int code = 0, const string& message = "{default}"):
+			m_code(code), 
+			m_message(utils::replace_all(message, "{default}", ec::get_message(code)))
 		{}
 
 		void set_code(int code) { m_code = code; }
@@ -106,13 +121,21 @@ namespace gdpm{
 #endif
 		}
 
+		// static constexpr void error(int code, const string& message = "{default}"){
+		// 	log::error(gdpm::error(code, message));
+		// }
+
 		static constexpr gdpm::error error_rc(const gdpm::error& e){
-			error(e);
+			log::error(e);
 			return e;
 		}
 
-		static void error(const char *p, const gdpm::error& e){
-			println("{}{}{}", p, prefix.contents, e.get_message());
+		static constexpr gdpm::error error_rc(int code, const string& message = "{default}"){
+			return error_rc(gdpm::error(code, message));
 		}
+	}
+
+	namespace concepts{
+		template <typename T>concept error_t = requires{ std::is_same<error, T>::value; };
 	}
 }

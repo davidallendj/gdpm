@@ -2,6 +2,12 @@
 
 #include "constants.hpp"
 #include "types.hpp"
+#include "indicators/indeterminate_progress_bar.hpp"
+#include "indicators/dynamic_progress.hpp"
+#include "indicators/progress_bar.hpp"
+#include "indicators/block_progress_bar.hpp"
+#include "utils.hpp"
+#include <memory>
 #include <unordered_map>
 #include <curl/curl.h>
 #include <curl/easy.h>
@@ -9,6 +15,13 @@
 namespace gdpm::http{
 	using headers_t = std::unordered_map<string, string>;
 	using header = std::pair<string, string>;
+
+	enum method{
+		GET,
+		POST,
+		PUT,
+		DELETE
+	};
 
 	// REF: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 	enum response_code{
@@ -77,6 +90,11 @@ namespace gdpm::http{
 		NETWORK_AUTHENTICATION_REQUIRED = 511
 	};
 
+	enum transfer_type{
+		REQUEST,
+		DOWNLOAD
+	};
+
 	struct response{
 		long code = 0;
 		string body{};
@@ -85,31 +103,91 @@ namespace gdpm::http{
 	};
 
 
-	struct request_params {
+	struct request {
 		headers_t headers = {};
+		method method = method::GET;
 		size_t timeout = GDPM_CONFIG_TIMEOUT_MS;
 		int verbose = 0;
 	};
+
+	using namespace indicators;
+	// BlockProgressBar bar {
+	// 	option::BarWidth{50},
+	// 	// option::Start{"["},
+	// 	// option::Fill{"="},
+	// 	// option::Lead{">"},
+	// 	// option::Remainder{" "},
+	// 	// option::End{"]"},
+	// 	option::PrefixText{"Downloading file "},
+	// 	option::PostfixText{""},
+	// 	option::ForegroundColor{Color::green},
+	// 	option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+	// };
+	// 	// option::ShowElapsedTime{true},
+	// 	// option::ShowRemainingTime{true},
+	// IndeterminateProgressBar bar_unknown {
+	// 	option::BarWidth{50},
+	// 	option::Start{"["},
+	// 	option::Fill{"."},
+	// 	option::Lead{"<==>"},
+	// 	option::PrefixText{"Downloading file "},
+	// 	option::End{"]"},
+	// 	option::PostfixText{""},
+	// 	option::ForegroundColor{Color::green},
+	// 	option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+	// };
+
+	struct transfer : public non_copyable{
+		transfer(){ curl = curl_easy_init(); }
+		transfer(transfer&&){}
+		~transfer(){ }
+
+		CURLcode res;
+		int id;
+		CURL *curl = nullptr;
+		FILE *fp = nullptr;
+		utils::memory_buffer data = {0};
+
+	};
+	using transfers = std::vector<transfer>;
+	using responses = std::vector<response>;
 
 	class context : public non_copyable{
 	public:
 		context();
 		~context();
 
-		inline CURL* const get_curl() const;
 		string url_escape(const string& url);
-		response request_get(const string& url, const http::request_params& params = http::request_params());
-		response request_post(const string& url, const http::request_params& params = http::request_params());
-		response download_file(const string& url, const string& storage_path, const http::request_params& params = http::request_params());
+		response request(const string& url, const http::request& params = http::request());
+		response download_file(const string& url, const string& storage_path, const http::request& params = http::request());
 		long get_download_size(const string& url);
 		long get_bytes_downloaded(const string& url);
-	
+
 	private:
-		CURL *curl;
-		curl_slist* _add_headers(CURL *curl, const headers_t& headers);
+		CURL *curl = nullptr;
 	};
 
-	
 
-	extern context http;
+	class multi{
+	public:
+		multi(long max_allowed_transfers = 2);
+		~multi();
+		string url_escape(const string& url);
+		ptr<transfers> make_requests(const string_list& urls, const http::request& params = http::request());
+		ptr<transfers> make_downloads(const string_list& url, const string_list& storage_path, const http::request& params = http::request());
+		ptr<responses> execute(ptr<transfers> transfers, size_t timeout = 1000);
+	
+	private:
+		DynamicProgress<BlockProgressBar> progress_bars;
+		CURLM *cm = nullptr;
+		CURLMsg *cmessage = nullptr;
+		CURLMcode cres;
+		int messages_left = -1;
+	};
+
+	curl_slist* add_headers(CURL *curl, const headers_t& headers);
+	static size_t write_to_buffer(char *contents, size_t size, size_t nmemb, void *userdata);
+	static size_t write_to_stream(char *ptr, size_t size, size_t nmemb, void *userdata);
+	static int show_download_progress(void *ptr, curl_off_t total_download, curl_off_t current_downloaded, curl_off_t total_upload, curl_off_t current_upload);
+
 }

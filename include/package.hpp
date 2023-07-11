@@ -110,8 +110,11 @@ namespace gdpm::package {
 	GDPM_DLL_EXPORT error search(const config::context& config, const title_list& package_titles, const params& params = package::params());
 	GDPM_DLL_EXPORT error list(const config::context& config, const params& params = package::params());
 	GDPM_DLL_EXPORT error export_to(const path_list& paths);
+	GDPM_DLL_EXPORT error clean(const config::context& config, const title_list& package_titles);
+	GDPM_DLL_EXPORT error purge(const config::context& config);
 	GDPM_DLL_EXPORT error link(const config::context& config, const title_list& package_titles, const params& params = package::params());
 	GDPM_DLL_EXPORT error clone(const config::context& config, const title_list& package_titles, const params& params = package::params());
+	GDPM_DLL_EXPORT result_t<info_list> fetch(const config::context& config, const title_list& package_titles);
 
 
 	GDPM_DLL_EXPORT void print_list(const rapidjson::Document& json);
@@ -120,12 +123,10 @@ namespace gdpm::package {
 	GDPM_DLL_EXPORT void print_table(const rapidjson::Document& json);
 	GDPM_DLL_EXPORT result_t<info_list> get_package_info(const opts_t& opts);
 	GDPM_DLL_EXPORT result_t<title_list> get_package_titles(const info_list& packages);
-	GDPM_DLL_EXPORT void clean_temporary(const config::context& config, const title_list& package_titles);
 	GDPM_DLL_EXPORT void read_file_inputs(title_list& package_titles, const path_list& paths);
 	GDPM_DLL_EXPORT info_list find_cached_packages(const title_list& package_titles);
 	GDPM_DLL_EXPORT info_list find_installed_packages(const title_list& package_titles);
 	/* Dependency Management API */
-	GDPM_DLL_EXPORT result_t<info_list> synchronize_database(const config::context& config, const title_list& package_titles);
 	GDPM_DLL_EXPORT result_t<info_list> resolve_dependencies(const config::context& config, const title_list& package_titles);
 
 	GDPM_DLL_EXPORT string to_json(const info& info, bool pretty_print = false);

@@ -2,11 +2,9 @@
 #include "utils.hpp"
 #include "config.hpp"
 #include "constants.hpp"
+#include "error.hpp"
 #include "log.hpp"
-#include "indicators/indeterminate_progress_bar.hpp"
-#include "indicators/dynamic_progress.hpp"
-#include "indicators/progress_bar.hpp"
-#include "indicators/block_progress_bar.hpp"
+
 #include "csv2/reader.hpp"
 
 
@@ -30,38 +28,13 @@
 
 namespace gdpm::utils{
 
-	using namespace indicators;
-	BlockProgressBar bar {
-		option::BarWidth{50},
-		// option::Start{"["},
-		// option::Fill{"="},
-		// option::Lead{">"},
-		// option::Remainder{" "},
-		// option::End{"]"},
-		option::PrefixText{"Downloading file "},
-		option::PostfixText{""},
-		option::ForegroundColor{Color::green},
-		option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
-	};
-		// option::ShowElapsedTime{true},
-		// option::ShowRemainingTime{true},
-	IndeterminateProgressBar bar_unknown {
-		option::BarWidth{50},
-		option::Start{"["},
-		option::Fill{"."},
-		option::Lead{"<==>"},
-		option::PrefixText{"Downloading file "},
-		option::End{"]"},
-		option::PostfixText{""},
-		option::ForegroundColor{Color::green},
-		option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
-	};
+	
 
-	bool to_bool(const std::string& s){
+	bool to_bool(const string& s){
 		return to_lower(s) == "true";
 	}
 
-	std::vector<std::string> split_lines(const std::string& contents){
+	std::vector<string> split_lines(const string& contents){
 		using namespace csv2;
 		csv2::Reader<
 			delimiter<'\n'>,
@@ -69,7 +42,7 @@ namespace gdpm::utils{
 			first_row_is_header<false>,
 			trim_policy::trim_whitespace
 		> csv;
-		std::vector<std::string> lines;
+		std::vector<string> lines;
 		if(csv.parse(contents)){
 			for(const auto& row : csv){
 				for(const auto& cell : row){
@@ -82,13 +55,13 @@ namespace gdpm::utils{
 
 	
 	#if (GDPM_READFILE_IMPL == 0)
-		std::string readfile(const std::string& path){
+		string readfile(const string& path){
 			constexpr auto read_size = std::size_t{4096};
 			auto stream = std::ifstream{path.data()};
 			stream.exceptions(std::ios_base::badbit);
 
-			auto out = std::string{};
-			auto buf = std::string(read_size, '\0');
+			auto out = string{};
+			auto buf = string(read_size, '\0');
 			while (stream.read(& buf[0], read_size)) {
 				out.append(buf, 0, stream.gcount());
 			}
@@ -97,15 +70,15 @@ namespace gdpm::utils{
 		}
 #elif(GDPM_READFILE_IMPL == 1)
 		
-	std::string readfile(const std::string& path){
+	string readfile(const string& path){
 		std::ifstream ifs(path);
-		return std::string(
+		return string(
 			(std::istreambuf_iterator<char>(ifs)),
 			(std::istreambuf_iterator<char>())
 		);
 	}
 #elif(GDPM_READFILE_IMPL == 2)
-	std::string readfile(const std::string& path){
+	string readfile(const string& path){
 		std::ifstream ifs(path);
 		std::stringstream buffer;
 		buffer << ifs.rdbuf();
@@ -113,43 +86,43 @@ namespace gdpm::utils{
 	}
 #endif
 
-	std::string to_lower(const std::string& s){
-		std::string copy = s;
+	string to_lower(const string& s){
+		string copy = s;
 		std::transform(copy.begin(), copy.end(), copy.begin(), tolower);
 		return copy;
 	}
 
-	std::string trim(const std::string& s){
+	string trim(const string& s){
 		return trim_right(trim_left(s));
 	}
 
-	std::string trim_left(const std::string& s){		
+	string trim_left(const string& s){		
 		return trim_left(s, constants::WHITESPACE);
 	}
 
-	std::string trim_left(
-		const std::string& s, 
-		const std::string& ref
+	string trim_left(
+		const string& s, 
+		const string& ref
 	){
 		size_t start = s.find_first_not_of(ref);
-		return (start == std::string::npos) ? "" : s.substr(start);	
+		return (start == string::npos) ? "" : s.substr(start);	
 	}
 
-	std::string trim_right(const std::string& s){
+	string trim_right(const string& s){
 		return trim_right(s, constants::WHITESPACE);
 	}
 
-	std::string trim_right(
-		const std::string& s, 
-		const std::string& ref
+	string trim_right(
+		const string& s, 
+		const string& ref
 	){
 		size_t end =  s.find_last_not_of(ref);
-		return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+		return (end == string::npos) ? "" : s.substr(0, end + 1);
 	}
 
-	std::vector<std::string> parse_lines(const std::string &s){
-		std::string line;
-		std::vector<std::string> result;
+	std::vector<string> parse_lines(const string &s){
+		string line;
+		std::vector<string> result;
 		std::stringstream ss(s);
 		while(std::getline(ss, line)){
 			result.emplace_back(line);
@@ -157,26 +130,26 @@ namespace gdpm::utils{
 		return result;
 	}
 
-	std::string replace_first(
-		const std::string &s, 
-		const std::string &from, 
-		const std::string &to
+	string replace_first(
+		const string &s, 
+		const string &from, 
+		const string &to
 	){
-		std::string copy = s; // make string copy
+		string copy = s; // make string copy
 		size_t pos = copy.find(from);
-		if(pos == std::string::npos)
+		if(pos == string::npos)
 			return copy;
 		return copy.replace(pos, from.length(), to);
 	}
 
-	std::string replace_all(
-		const std::string& s, 
-		const std::string& from, 
-		const std::string& to
+	string replace_all(
+		const string& s, 
+		const string& from, 
+		const string& to
 	){
-		std::string copy = s; // make string copy
+		string copy = s; // make string copy
 		size_t pos = 0;
-		while((pos = copy.find(from, pos)) != std::string::npos){
+		while((pos = copy.find(from, pos)) != string::npos){
 			copy.replace(pos, s.length(), to);
 			pos += to.length();
 		}
@@ -184,45 +157,47 @@ namespace gdpm::utils{
 	}
 
 	/* Ref: https://gist.github.com/mobius/1759816 */
-	int extract_zip(
+	error extract_zip(
 		const char *archive, 
 		const char *dest, 
 		int verbose
 	){
-		constexpr const char *prog = "gpdm";
-		struct zip *zip;
+		constexpr int SIZE = 1024;
+		struct zip *za;
 		struct zip_file *zf;
 		struct zip_stat sb;
-		char buf[100];
+		char buf[SIZE];
 		int err;
 		int i, len, fd;
 		zip_uint64_t sum;
 
-		// log::info_n("Extracting package contents to '{}'...", dest);
-		log::info_n("Extracting package contents...");
-		if((zip = zip_open(archive, 0, &err)) == nullptr){
+		std::filesystem::path path(archive);
+		log::info_n("Extracting \"{}\" archive...", path.filename().string());
+		if((za = zip_open(path.c_str(), ZIP_RDONLY, &err)) == NULL){
 			zip_error_to_str(buf, sizeof(buf), err, errno);
-			log::error("{}: can't open zip archive {}: {}", prog, archive, buf);
-			return 1;
+			log::println("");
+			return log::error_rc(error(
+				ec::LIBZIP_ERR, 
+				std::format("utils::extract_zip(): can't open zip archive \"{}\": {}", path.filename().string(), buf))
+			);
 		}
 
-		for(i = 0; i < zip_get_num_entries(zip, 0); i++){
-			if(zip_stat_index(zip, i, 0, &sb) == 0){
+		for(i = 0; i < zip_get_num_entries(za, 0); i++){
+			if(zip_stat_index(za, i, 0, &sb) == 0){
 				len = strlen(sb.name);
 				if(verbose > 1){
-					log::print("{}, ", sb.name);
-					log::println("size: {}, ", sb.size);
+					log::println("utils::extract_zip(): {}, size: {}", sb.name, sb.size);
 				}
-				std::string path{dest};
+				string path{dest};
 				path += sb.name;
 				if(sb.name[len-1] == '/'){
-					// safe_create_dir(sb.name);
 					std::filesystem::create_directory(path);
 				} else {
-					zf = zip_fopen_index(zip, i, 0);
+					zf = zip_fopen_index(za, i, 0);
 					if(!zf){
-						log::error("extract_zip: zip_fopen_index() failed.");
-						return 100;
+						return log::error_rc(error(ec::LIBZIP_ERR, 
+							"utils::extract_zip(): zip_fopen_index() failed.")
+						);
 					}
 #ifdef _WIN32
 					fd = open(sb.name, O_RDWR | O_TRUNC | O_CREAT | O_BINARY, 0644);
@@ -230,16 +205,19 @@ namespace gdpm::utils{
 					fd = open(path.c_str(), O_RDWR | O_TRUNC | O_CREAT, 0644);
 #endif
 					if(fd < 0){
-						log::error("extract_zip: open() failed. (path: {}, fd={})", path, fd);
-						return 101;
+						log::error_rc(error(ec::LIBZIP_ERR,
+							std::format("utils::extract_zip(): open() failed. (path: {}, fd={})", path, fd))
+						);
 					}
 
 					sum = 0;
 					while(sum != sb.size){
 						len = zip_fread(zf, buf, 100);
 						if(len < 0){
-							log::error("extract_zip: zip_fread() returned len < 0 (len={})", len);
-							return 102;
+							return log::error_rc(error(
+								ec::LIBZIP_ERR,
+								std::format("utils::extract_zip(): zip_fread() returned len < 0 (len={})", len))
+							);
 						}
 						write(fd, buf, len);
 						sum += len;
@@ -252,24 +230,23 @@ namespace gdpm::utils{
 			}
 		}
 
-		if(zip_close(zip) == -1){
-			log::error("{}: can't close zip archive '{}'", prog, archive);
-			return 1;
+		if(zip_close(za) == -1){
+			return log::error_rc(error(ec::LIBZIP_ERR,
+				std::format("utils::extract_zip: can't close zip archive '{}'", archive))
+			);
 		}
-		log::println("Done.");
-		return 0;
+		return error();
 	}
 
-	std::string prompt_user(const char *message){
+	string prompt_user(const char *message){
 		log::print("{} ", message);
-		std::string input;
-		// std::cin >> input;
+		string input;
 		getline(std::cin, input);
 		return input;
 	}
 	
 	bool prompt_user_yn(const char *message){
-		std::string input{""};
+		string input{""};
 		while( input != "y" && input != "n" ){
 			input = to_lower(utils::prompt_user(message));
 			bool is_default = (input == "\0" || input == "\n" || input == "\r\n" || input.empty());
@@ -287,15 +264,15 @@ namespace gdpm::utils{
 		// sleep_until(system_clock::now() + millis);
 	}
 
-	std::string join(
-		const std::vector<std::string>& target,
-		const std::string& delimiter
+	string join(
+		const std::vector<string>& target,
+		const string& delimiter
 	){
-		std::string o;
+		string o;
 		std::for_each(
 			target.begin(), 
 			target.end(), 
-			[&o, &delimiter](const std::string& s){
+			[&o, &delimiter](const string& s){
 				o += s + delimiter;
 			}
 		);
@@ -303,16 +280,16 @@ namespace gdpm::utils{
 		return o;
 	}
 
-	std::string join(
-		const std::unordered_map<std::string, std::string>& target,
-		const std::string& prefix,
-		const std::string& delimiter
+	string join(
+		const std::unordered_map<string, string>& target,
+		const string& prefix,
+		const string& delimiter
 	){
-		std::string o;
+		string o;
 		std::for_each(
 			target.begin(),
 			target.end(),
-			[&o, &prefix, &delimiter](const std::pair<std::string, std::string>& p){
+			[&o, &prefix, &delimiter](const std::pair<string, string>& p){
 				o += prefix + p.first + ": " + p.second + delimiter;
 			}
 		);
@@ -320,13 +297,13 @@ namespace gdpm::utils{
 		return o;
 	}
 
-	std::string convert_size(long size){
+	string convert_size(long size){
 		int digit = 0;
 		while(size > 1000){
 			size /= 1000;
 			digit += 1;
 		}
-		std::string s = std::to_string(size);
+		string s = std::to_string(size);
 		switch(digit){
 			case 0: return s + " B";
 			case 1: return s + " KB";
@@ -338,93 +315,13 @@ namespace gdpm::utils{
 		return std::to_string(size);
 	}
 
-
-	namespace curl {
-		size_t write_to_buffer(
-			char *contents, 
-			size_t size, 
-			size_t nmemb, 
-			void *userdata
-		){
-			size_t realsize = size * nmemb;
-			struct memory_buffer *m = (struct memory_buffer*)userdata;
-
-			m->addr = (char*)realloc(m->addr, m->size + realsize + 1);
-			if(m->addr == nullptr){
-				/* Out of memory */
-				fprintf(stderr, "Not enough memory (realloc returned NULL)\n");
-				return 0;
-			}
-
-			memcpy(&(m->addr[m->size]), contents, realsize);
-			m->size += realsize;
-			m->addr[m->size] = 0;
-
-			return realsize;
-		}
-
-		size_t write_to_stream(
-			char *ptr, 
-			size_t size, 
-			size_t nmemb, 
-			void *userdata
-		){
-			if(nmemb == 0)
-				return 0;
-						
-			return fwrite(ptr, size, nmemb, (FILE*)userdata);
-		}
-
-		int show_progress(
-			void *ptr,
-			curl_off_t total_download,
-			curl_off_t current_downloaded,
-			curl_off_t total_upload,
-			curl_off_t current_upload
-		){
-
-			if(current_downloaded >= total_download)
-				return 0;
-			using namespace indicators;
-			show_console_cursor(false);
-			if(total_download != 0){
-				// double percent = std::floor((current_downloaded / (total_download)) * 100);
-				bar.set_option(option::MaxProgress{total_download});
-				// bar.set_option(option::HideBarWhenComplete{false});
-				bar.set_progress(current_downloaded);
-				bar.set_option(option::PostfixText{
-						convert_size(current_downloaded) + " / " + 
-						convert_size(total_download)
-				});
-				if(bar.is_completed()){
-					bar.set_option(option::PrefixText{"Download completed."});
-					bar.mark_as_completed();
-				}
-			} else {
-				if(bar_unknown.is_completed()){
-					bar_unknown.set_option(option::PrefixText{"Download completed."});
-					bar_unknown.mark_as_completed();
-				} else {
-					bar.tick();
-					bar_unknown.set_option(
-						option::PostfixText(std::format("{}", convert_size(current_downloaded)))
-					);
-
-				}
-			}
-			show_console_cursor(true);
-			memory_buffer *m = (memory_buffer*)ptr;
-			return 0;
-		}
-	}
-
 	namespace json {
-		std::string from_array(
-			const std::set<std::string>& a, 
-			const std::string& prefix
+		string from_array(
+			const std::set<string>& a, 
+			const string& prefix
 		){
-			std::string o{"["};
-			for(const std::string& src : a)
+			string o{"["};
+			for(const string& src : a)
 				o += prefix + "\t\"" + src + "\",";
 			if(o.back() == ',')
 				o.pop_back();
@@ -433,14 +330,14 @@ namespace gdpm::utils{
 		};
 
 
-		std::string from_object(
-			const std::unordered_map<std::string, std::string>& m, 
-			const std::string& prefix, 
-			const std::string& spaces
+		string from_object(
+			const std::unordered_map<string, string>& m, 
+			const string& prefix, 
+			const string& spaces
 		){
-			std::string o{"{"};
+			string o{"{"};
 			std::for_each(m.begin(), m.end(), 
-				[&o, &prefix, &spaces](const std::pair<std::string, std::string>& p){
+				[&o, &prefix, &spaces](const std::pair<string, string>& p){
 					o += std::format("{}\t\"{}\":{}\"{}\",", prefix, p.first, spaces, p.second);
 				}
 			);

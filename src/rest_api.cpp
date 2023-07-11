@@ -119,7 +119,10 @@ namespace gdpm::rest_api{
 		return request_url;
 	}
 
-	error print_params(const request_params& params, const string& filter){
+	error print_params(
+		const request_params& params, 
+		const string& filter
+	){
 		log::println("params: \n"
 			"\ttype: {}\n"
 			"\tcategory: {}\n"
@@ -147,7 +150,7 @@ namespace gdpm::rest_api{
 			Document doc = rest_api::get_assets_list(request_url, rest_api_params);
 			if(doc.IsNull()){
 				return log::error_rc(error(
-					constants::error::HOST_UNREACHABLE,
+					ec::HOST_UNREACHABLE,
 					"Could not fetch metadata. Aborting."
 				));
 			}
@@ -166,9 +169,9 @@ namespace gdpm::rest_api{
 		http::context http;
 		string request_url{url};
 		request_url += to_string(type);
-		http::response r = http.request_get(url);
+		http::response r = http.request(url);
 		if(verbose > 0)
-			log::info("URL: {}", url);
+			log::info("rest_api::configure::url: {}", url);
 		return _parse_json(r.body);
 	}
 
@@ -179,15 +182,15 @@ namespace gdpm::rest_api{
 		const string& filter
 	){
 		http::context http;
-		http::request_params http_params;
-		http_params.headers.insert(http::header("Accept", "*/*"));
-		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Connection", "keep-alive"));
-		string request_url = _prepare_request(url, c, http.url_escape(filter));
-		http::response r = http.request_get(request_url, http_params);
+		http::request params;
+		params.headers.insert(http::header("Accept", "*/*"));
+		params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		params.headers.insert(http::header("Connection", "keep-alive"));
+		string prepared_url = _prepare_request(url, c, http.url_escape(filter));
+		http::response r = http.request(prepared_url, params);
 		if(c.verbose >= log::INFO)
-			log::info("rest_api::get_asset_list()::URL: {}", request_url);
+			log::info("rest_api::get_asset_list()::url: {}", prepared_url);
 		return _parse_json(r.body, c.verbose);
 	}
 
@@ -200,16 +203,18 @@ namespace gdpm::rest_api{
 	){
 		/* Set up HTTP request */
 		http::context http;
-		http::request_params http_params;
-		http_params.headers.insert(http::header("Accept", "*/*"));
-		http_params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Content-Encoding", "application/gzip"));
-		http_params.headers.insert(http::header("Connection", "keep-alive"));
-		string request_url = utils::replace_all(_prepare_request(url, api_params, http.url_escape(filter)), "{id}", std::to_string(asset_id));
-		http::response r = http.request_get(request_url.c_str(), http_params);
+		http::request params;
+		params.headers.insert(http::header("Accept", "*/*"));
+		params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+		params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+		params.headers.insert(http::header("Connection", "keep-alive"));
+		string prepared_url = utils::replace_all(
+			_prepare_request(url, api_params, 
+				http.url_escape(filter)
+			), "{id}", std::to_string(asset_id));
+		http::response r = http.request(prepared_url, params);
 		if(api_params.verbose >= log::INFO)
-			log::info("get_asset().URL: {}", request_url);
-		
+			log::info("rest_api::get_asset()::url: {}", prepared_url);
 		return _parse_json(r.body);
 	}
 
@@ -228,27 +233,56 @@ namespace gdpm::rest_api{
 		return false;
 	}
 
+
+	namespace multi{
+		json::documents get_assets(
+			const string_list& urls,
+			id_list asset_ids,
+			const request_params& api_params,
+			const string_list& filters
+		){
+			if(urls.size() == asset_ids.size() && urls.size() == filters.size()){
+				log::error(ec::ASSERTION_FAILED,
+					"multi::get_assets(): urls.size() != filters.size()"
+				);
+			}
+			http::multi http;
+			http::request params;
+			json::documents docs;
+			params.headers.insert(http::header("Accept", "*/*"));
+			params.headers.insert(http::header("Accept-Encoding", "application/gzip"));
+			params.headers.insert(http::header("Content-Encoding", "application/gzip"));
+			params.headers.insert(http::header("Connection", "keep-alive"));
+			string_list prepared_urls = {};
+			
+			/* Prepare the URLs for the request_multi() call z*/
+			for(size_t i = 0; i < urls.size(); i++){
+				const string& url = urls.at(i);
+				const string& filter = filters.at(i);
+				int asset_id = asset_ids.at(i);
+				string prepared_url = utils::replace_all(
+						_prepare_request(url, api_params, http.url_escape(filter)),
+							"{id}", std::to_string(asset_id));
+				prepared_urls.emplace_back(prepared_url);
+				if(api_params.verbose >= log::INFO)
+					log::info("get_assets(i={})::url: {}", i, prepared_url);
+			}
+			
+			/* Parse JSON string into objects */
+			ptr<http::transfers> transfers = http.make_requests(prepared_urls, params);
+			ptr<http::responses> responses = http.execute(std::move(transfers));
+			for(const auto& response : *responses){
+				docs.emplace_back(_parse_json(response.body));
+			}
+			return docs;
+		}
+	}
+
 	namespace edits{
-
-		void edit_asset(){
-
-		}
-
-		void get_asset_edit(int asset_id){
-
-		}
-
-		string review_asset_edit(int asset_id){
-			return string();
-		}
-
-		string accept_asset_edit(int asset_id){
-			return string();
-		}
-
-		string reject_asset_edit(int asset_id){
-			return string();
-		}
-
+		void edit_asset(){}
+		void get_asset_edit(int asset_id){}
+		string review_asset_edit(int asset_id){ return string(); }
+		string accept_asset_edit(int asset_id){ return string(); }
+		string reject_asset_edit(int asset_id){ return string(); }
 	} // namespace edits
 }

@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "constants.hpp"
+#include "types.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -71,6 +72,11 @@ namespace gdpm::utils {
 		std::move(part, from.end(), std::back_inserter(from));
 		from.erase(part);
 	}
+	template <class T>
+	std::vector<T> append(const std::vector<T>& a, const std::vector<T>& b){
+		a.insert(std::end(a), std::begin(b), std::end(b));
+		return a;
+	}
 
 	bool to_bool(const std::string& s);
 	std::vector<std::string> split_lines(const std::string& contents);
@@ -84,7 +90,7 @@ namespace gdpm::utils {
 	std::vector<std::string> parse_lines(const std::string& s);
 	std::string replace_first(const std::string& s, const std::string& from, const std::string& to);
 	std::string replace_all(const std::string& s, const std::string& from, const std::string& to);
-	int extract_zip(const char *archive, const char *dest, int verbose = 0);
+	error extract_zip(const char *archive, const char *dest, int verbose = 0);
 	std::string prompt_user(const char *message);
 	bool prompt_user_yn(const char *message);
 	void delay(std::chrono::milliseconds milliseconds = GDPM_REQUEST_DELAY);
@@ -93,11 +99,6 @@ namespace gdpm::utils {
 	std::string convert_size(long size);
 	// TODO: Add function to get size of decompressed zip
 
-	namespace curl {
-		extern size_t write_to_buffer(char *contents, size_t size, size_t nmemb, void *userdata);
-		extern size_t write_to_stream(char *ptr, size_t size, size_t nmemb, void *userdata);
-		extern int show_progress(void *ptr, curl_off_t total_download, curl_off_t current_downloaded, curl_off_t total_upload, curl_off_t current_upload);
-	}
 	namespace json {
 		std::string from_array(const std::set<std::string>& a, const std::string& prefix);
 		std::string from_object(const std::unordered_map<std::string, std::string>& m, const std::string& prefix, const std::string& spaces);

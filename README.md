@@ -324,11 +324,11 @@ gdpm config set username towk
 
 ## Planned Features
 
-- [x] Godot 4 Asset Library compatibility.
+- [x] Compatible with Godot 4
 
-- [ ] PKGBUILD for ArchLinux/Manjaro
+- [x] Parallel downloading.
 
-- [ ] Multithreaded downloading.
+- [ ] PKGBUILD for ArchLinux/Manjaro.
 
 - [ ] Proper updating.
 
@@ -339,6 +339,8 @@ gdpm config set username towk
 - [ ] Support for paid assets.
 
 - [ ] Adapted to new Asset API.
+
+- [ ] User interface.
 
 - [ ] Experimental dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
 ## Known Issues

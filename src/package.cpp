@@ -40,97 +40,110 @@ namespace gdpm::package{
 
 		*/
 
+		/* Synchronize database information and then try to get data again from
+		cache if possible. */
+		if(config.enable_sync){
+			result_t result = fetch(config, package_titles);
+			error error = result.get_error();
+			if(error.has_occurred()){
+				return log::error_rc(ec::UNKNOWN, "package::install(): could not synchronize database.");
+			}
+		}
 		/* Append files from --file option */
 		read_file_inputs(package_titles, params.input_files);
-		
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_cache = result.unwrap_unsafe();
 
-		/* Synchronize database information and then try to get data again from
-		cache if possible. */
-		if(config.enable_sync || p_cache.empty()){
-			result_t result = synchronize_database(config, package_titles);
-			p_cache = result.unwrap_unsafe();
-		}
-
-		/* Match queried package titles with those found in cache. */
-		package::info_list p_found = find_cached_packages(package_titles);
-
-		// if(p_found.size() == package_titles.size()){
-		// 	log::info("Found all packages stored in local cache.");
-		// }
-
 		/* Found nothing to install so there's nothing to do at this point. */
-		if(p_found.empty()){
-			error error(
-				constants::error::NOT_FOUND,
-				"No packages found to install."
+		if(p_cache.empty()){
+			return log::error_rc(
+				ec::NOT_FOUND, /* TODO: change to PACKAGE_NOT_FOUND */
+				"package::install(): no packages found to install."
 			);
-			log::error(error);
-			return error;
 		}
 		
-		log::println("Packages to install: ");
-		for(const auto& p : p_found){
-			string output((p.is_installed) ? p.title + " (reinstall)" : p.title);
-			log::print("  {}  ", (p.is_installed) ? p.title + " (reinstall)" : p.title);
+		/* Show packages to install */
+		{
+			using namespace tabulate;
+			Table table;
+			table.format()
+				.border_top("")
+				.border_bottom("")
+				.border_left("")
+				.border_right("")
+				.corner("")
+				.padding_top(0)
+				.padding_bottom(0);
+			table.add_row({"Title", "Author", "Category", "Version", "Godot", "Last Modified", "Installed?"});
+			table[0].format()
+				.font_style({FontStyle::underline, FontStyle::bold});
+			for(const auto& p : p_cache){
+				table.add_row({p.title, p.author, p.category, p.version, p.godot_version, p.modify_date, (p.is_installed) ? "✔️": "❌"});
+				size_t index = table.size() - 1;
+				table[index][3].format().font_align(FontAlign::center);
+				table[index][4].format().font_align(FontAlign::center);
+				table[index][6].format().font_align(FontAlign::center);
+
+				// string output(p.title + GDPM_COLOR_CYAN " v" + p.version + GDPM_COLOR_RESET);
+				// output += GDPM_COLOR_BLUE " last updated: " + p.modify_date + GDPM_COLOR_RESET;
+				// output += (p.is_installed) ? GDPM_COLOR_LIGHT_CYAN " (reinstall)" : "";
+				// output += GDPM_COLOR_RESET;
+				// log::print("    {}\n", output);
+			}
+			table.print(std::cout);
+			log::println("");
 		}
-		log::println("");
 		
+		/* Skip prompt if set in config */
 		if(!config.skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to install these packages? (Y/n)"))
 				return error();
 		}
 
-		/* Check if provided param is in remote sources*/
+		/* Check if provided remote param is in remote sources */
 		if(!config.remote_sources.contains(params.remote_source)){
-			error error(
-				constants::error::NOT_FOUND,
-				"Remote source not found in config."
+			return log::error_rc(
+				ec::NOT_FOUND, /* TODO: change to REMOTE_NOT_FOUND */
+				"package::install(): remote source not found in config."
 			);
-			log::error(error);
-			return error;
 		}
 
-		/* Try and obtain all requested packages. */
-		std::vector<string_pair> dir_pairs;
-		task_list tasks;
+		// task_list tasks;
+		/* Retrieve necessary asset data if it was found already in cache */
+		std::vector<string_pair> target_extract_dirs;
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
-		for(auto& p : p_found){	// TODO: Execute each in parallel using coroutines??
-
-			/* Check if a remote source was provided. If not, then try to get packages
-			in global storage location only. */
-
-			log::info("Fetching asset data for \"{}\"...", p.title);
+		package::title_list p_download_urls;
+		package::path_list p_storage_paths;
+		for(auto& p : p_cache){
+			log::info_n("Fetching asset data for \"{}\"...", p.title);
 			string url{config.remote_sources.at(params.remote_source) + rest_api::endpoints::GET_AssetId};
-			string package_dir, tmp_dir, tmp_zip;
+			string package_dir = config.packages_dir + "/" + p.title;
+			string tmp_dir 	= config.tmp_dir + "/" + p.title;
+			string tmp_zip 	= tmp_dir + ".zip";
 
-			/* Retrieve necessary asset data if it was found already in cache */
 			Document doc;
-			bool is_missing_data = p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty();
-			if(is_missing_data){
+			bool is_data_missing = p.download_url.empty() || p.category.empty() || p.description.empty() || p.support_level.empty();
+			if(is_data_missing){
 				doc = rest_api::get_asset(url, p.asset_id, rest_api_params);
 				if(doc.HasParseError() || doc.IsNull()){
-					return log::error_rc(error(
-						constants::error::JSON_ERR,
-						std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()))
-					));
+					return log::error_rc(
+						ec::JSON_ERR,
+						std::format("package::install(): error parsing JSON: {}", 
+							GetParseError_En(doc.GetParseError()))
+					);
 				}
 				p.category			= doc["category"].GetString();
 				p.description 		= doc["description"].GetString();
 				p.support_level 	= doc["support_level"].GetString();
 				p.download_url 		= doc["download_url"].GetString();
 				p.download_hash 	= doc["download_hash"].GetString();
+				log::println("Done");
 			}
 			else{
-				log::info("Found asset data found for \"{}\"", p.title);
+				log::println("");
+				log::info("Found asset data for \"{}\".", p.title);
 			}
-
-			/* Set directory and temp paths for storage */
-			package_dir = config.packages_dir + "/" + p.title;
-			tmp_dir 	= config.tmp_dir + "/" + p.title;
-			tmp_zip 	= tmp_dir + ".zip";
-
+		
 			/* Make directories for packages if they don't exist to keep everything organized */
 			if(!std::filesystem::exists(config.tmp_dir))
 				std::filesystem::create_directories(config.tmp_dir);
@@ -145,60 +158,83 @@ namespace gdpm::package{
 			OStreamWrapper osw(ofs);
 			PrettyWriter<OStreamWrapper> writer(osw);
 			doc.Accept(writer);
+			target_extract_dirs.emplace_back(string_pair(tmp_zip, package_dir + "/"));
 
 			/* Check if we already have a stored temporary file before attempting to download */
 			if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
-				log::info("Found cached package. Skipping download.", p.title);
+				log::info("Found cached package for \"{}\".", p.title);
 			}
 			else{
-				/* Download all the package files and place them in tmp directory. */
-				log::info_n("Downloading \"{}\"...", p.title);
-				http::context http;
-				http::response response = http.download_file(p.download_url, tmp_zip);
-				if(response.code == http::OK){
-					log::println("Done.");
-				}else{
-					return log::error_rc(error(
-						constants::error::HTTP_RESPONSE_ERR,
-						std::format("HTTP Error: {}", response.code)
-					));
-				}
+				p_download_urls.emplace_back(p.download_url);
+				p_storage_paths.emplace_back(tmp_zip);
 			}
-
-			dir_pairs.emplace_back(string_pair(tmp_zip, package_dir + "/"));
-
-			p.is_installed = true;
-			p.install_path = package_dir;
-
-			/* Extract all the downloaded packages to their appropriate directory location. */
-			for(const auto& p : dir_pairs){
-				int ec = utils::extract_zip(p.first.c_str(), p.second.c_str());
-				if(ec){
-					log::error_rc(error(
-						constants::error::LIBZIP_ERR,
-						std::format("libzip returned an error code {}", ec)
-					));
-				}
-			}
-
-			/* Update the cache data with information from  */
-			log::info_n("Updating local asset data...");
-			error error = cache::update_package_info(p_found);
-			if(error.has_occurred()){
-				string prefix = std::format(log::get_error_prefix(), utils::timestamp());
-				log::println(GDPM_COLOR_LOG_ERROR"\n{}{}" GDPM_COLOR_RESET, prefix, error.get_message());
-				return error;
-			}
-			if(config.clean_temporary){
-				clean_temporary(config, package_titles);
-			}
-
-			log::println("Done.");
-				// })
-			// );
 		}
 
-		return error();
+		/* Make sure the number of urls matches storage locations */
+		if(p_download_urls.size() != p_storage_paths.size()){
+			return log::error_rc(error(ec::ASSERTION_FAILED,
+				"package::install(): p_left.size() != p_storage.size()"
+			));
+		}
+
+		/* Attempt to download ZIPs in parallel */
+		if(config.jobs > 1){
+			http::multi http(config.jobs);
+			ptr<http::transfers> transfers = http.make_downloads(p_download_urls, p_storage_paths);
+			ptr<http::responses> responses = http.execute(std::move(transfers));
+			
+			/* Check for HTTP response errors */
+			for(const auto& r : *responses){
+				if(r.code != http::OK){
+					log::error(error(ec::HTTP_RESPONSE_ERR,
+						std::format("HTTP error: {}", r.code)
+					));
+				}
+			}
+		}
+		else{
+			http::context http;
+			for(size_t i = 0; i < p_download_urls.size(); i++){
+				http::response r = http.download_file(
+					p_download_urls[i], 
+					p_storage_paths[i]
+				);
+				if(r.code != http::OK){
+					log::error(error(ec::HTTP_RESPONSE_ERR,
+						std::format("HTTP error: {}", r.code)
+					));
+				}
+			}
+		}
+
+		/* Extract all the downloaded packages to their appropriate directory location. */
+		for(const auto& p : target_extract_dirs){
+			error error = utils::extract_zip(p.first.c_str(), p.second.c_str());
+			if(error.has_occurred()){
+				return error;
+			}
+			log::println("Done.");
+		}
+		
+		/* Update the cache data */
+		for(auto& p : p_cache){
+			p.is_installed = true;
+			p.install_path = config.packages_dir + "/" + p.title;
+		}
+
+		log::info_n("Updating local asset data...");
+		error error = cache::update_package_info(p_cache);
+		if(error.has_occurred()){
+			string prefix = std::format(log::get_error_prefix(), utils::timestamp());
+			log::println(GDPM_COLOR_LOG_ERROR"\n{}{}" GDPM_COLOR_RESET, prefix, error.get_message());
+			return error;
+		}
+		if(config.clean_temporary){
+			clean(config, package_titles);
+		}
+		log::println("Done.");
+
+		return error;
 	}
 
 
@@ -233,18 +269,16 @@ namespace gdpm::package{
 
 		/* Check if provided param is in remote sources*/
 		if(!config.remote_sources.contains(params.remote_source)){
-			error error(
-				constants::error::NOT_FOUND,
+			return log::error_rc(ec::NOT_FOUND,
 				"Remote source not found in config."
 			);
-			log::error(error);
-			return error;
 		}
 
 		/* Install the other packages from remte source. */
 		std::vector<string_pair> dir_pairs;
 		task_list tasks;
 		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
+		package::info_list p_left;
 		for(auto& p : p_found){	// TODO: Execute each in parallel using coroutines??
 
 			/* Check if a remote source was provided. If not, then try to get packages
@@ -299,20 +333,36 @@ namespace gdpm::package{
 			if(std::filesystem::exists(tmp_zip) && std::filesystem::is_regular_file(tmp_zip)){
 				log::info("Found cached package. Skipping download.", p.title);
 			}
-			else{
-				/* Download all the package files and place them in tmp directory. */
-				log::info_n("Downloading \"{}\"...", p.title);
-				http::context http;
-				http::response response = http.download_file(p.download_url, tmp_zip);
-				if(response.code == http::OK){
-					log::println("Done.");
-				}else{
-					return log::error_rc(error(
-						constants::error::HTTP_RESPONSE_ERR,
-						std::format("HTTP Error: {}", response.code)
-					));
-				}
+			else {
+				p_left.emplace_back(p);
 			}
+		} // for loop
+
+		/* Get the packages not found in cache and download */
+		string_list urls;
+		for(const auto& p : p_left){
+			urls.emplace_back(p.download_url);
+		}
+		http::multi http;
+		ptr<http::transfers> transfers = http.make_requests(urls);
+		ptr<http::responses> responses = http.execute(std::move(transfers));
+
+		for(const auto& response : *responses){
+			if(response.code == http::OK){
+				log::println("Done.");
+			}else{
+				return log::error_rc(error(
+					constants::error::HTTP_RESPONSE_ERR,
+					std::format("HTTP Error: {}", response.code)
+				));
+			}
+		}
+
+		/* Extract all packages and update cache database */
+		for(auto& p : p_found){
+			string package_dir = std::filesystem::current_path().string() + "/" + p.title;//config.packages_dir + "/" + p.title;
+			string tmp_dir 	= std::filesystem::current_path().string() + "/" + p.title + ".tmp";
+			string tmp_zip 	= tmp_dir + ".zip";
 
 			dir_pairs.emplace_back(string_pair(tmp_zip, package_dir + "/"));
 
@@ -321,13 +371,7 @@ namespace gdpm::package{
 
 			/* Extract all the downloaded packages to their appropriate directory location. */
 			for(const auto& p : dir_pairs){
-				int ec = utils::extract_zip(p.first.c_str(), p.second.c_str());
-				if(ec){
-					log::error_rc(error(
-						constants::error::LIBZIP_ERR,
-						std::format("libzip returned an error code {}", ec)
-					));
-				}
+				error error = utils::extract_zip(p.first.c_str(), p.second.c_str());
 			}
 
 			/* Remove temporary download archive */
@@ -357,12 +401,9 @@ namespace gdpm::package{
 		result_t result = cache::get_package_info_by_title(package_titles);
 		package::info_list p_cache = result.unwrap_unsafe();
 		if(p_cache.empty()){
-			error error(
-				constants::error::NOT_FOUND,
+			return log::error_rc(ec::NOT_FOUND,
 				"Could not find any packages to remove."
 			);
-			log::error(error);
-			return error;
 		}
 
 		/* Count number packages in cache flagged as is_installed. If there are none, then there's nothing to do. */
@@ -372,19 +413,36 @@ namespace gdpm::package{
 		});
 
 		if(p_count == 0){
-			error error(
-				constants::error::NOT_FOUND,
+			return log::error_rc(ec::NOT_FOUND,
 				"No packages to remove."
 			);
-			log::error(error);
-			return error;
 		}
 		
-		log::println("Packages to remove:");
-		for(const auto& p : p_cache)
-			if(p.is_installed)
-				log::print("  {}  ", p.title);
-		log::println("");
+		{
+			using namespace tabulate;
+			Table table;
+			table.format()
+				.border_top("")
+				.border_bottom("")
+				.border_left("")
+				.border_right("")
+				.corner("")
+				.padding_top(0)
+				.padding_bottom(0);
+			table.add_row({"Title", "Author", "Category", "Version", "Godot", "Last Modified", "Installed?"});
+			table[0].format()
+				.font_style({FontStyle::underline, FontStyle::bold});
+			for(const auto& p : p_cache){
+				table.add_row({p.title, p.author, p.category, p.version, p.godot_version, p.modify_date, (p.is_installed) ? "✔️": "❌"});
+				// string output(p.title + GDPM_COLOR_CYAN " v" + p.version + GDPM_COLOR_RESET);
+				// output += GDPM_COLOR_BLUE " last updated: " + p.modify_date + GDPM_COLOR_RESET;
+				// output += (p.is_installed) ? GDPM_COLOR_LIGHT_CYAN " (reinstall)" : "";
+				// output += GDPM_COLOR_RESET;
+				// log::print("    {}\n", output);
+			}
+			table.print(std::cout);
+			log::println("");
+		}
 		
 		if(!config.skip_prompt){
 			if(!utils::prompt_user_yn("Do you want to remove these packages? (Y/n)"))
@@ -428,13 +486,13 @@ namespace gdpm::package{
 		}
 		log::println("Done.");
 		if(config.clean_temporary){
-			clean_temporary(config, package_titles);
+			clean(config, package_titles);
 		}
 		log::info_n("Updating local asset data...");
 		{
 			error error = cache::update_package_info(p_cache);
 			if(error.has_occurred()){
-				log::error("\n{}", error.get_message());
+				log::error("\nsqlite: {}", error.get_message());
 				return error;
 			}
 		}
@@ -473,9 +531,9 @@ namespace gdpm::package{
 			string url{constants::HostUrl + rest_api::endpoints::GET_AssetId};
 			Document doc = rest_api::get_assets_list(url, rest_api_params);
 			if(doc.IsNull()){
-				constexpr const char *message = "Could not get response from server. Aborting.";
-				log::error(message);
-				return error(constants::error::HOST_UNREACHABLE, message);
+				return log::error_rc(ec::HOST_UNREACHABLE, 
+					"package::update(): could not get response from server. Aborting."
+				);
 			}
 			return error();
 		}
@@ -568,10 +626,9 @@ namespace gdpm::package{
 			remote::print_repositories(config);
 		}
 		else{
-			log::error(error(
-				constants::error::UNKNOWN_COMMAND,
-				"Unrecognized subcommand. Try either 'packages' or 'remote' instead."
-			));
+			log::error_rc(ec::UNKNOWN_COMMAND,
+				"package::list(): unrecognized subcommand...try either 'packages' or 'remote' instead."
+			);
 		}
 		return error();
 	}
@@ -598,9 +655,9 @@ namespace gdpm::package{
 
 				}
 				else {
-					constexpr const char *message = "File or directory exists!";
-					log::error(message);
-					return error(constants::error::FILE_EXISTS, message);
+					return log::error_rc(ec::FILE_EXISTS,
+						"package::export_to(): file or directory exists!"
+					);
 				}
 			}
 			std::ofstream of(path);
@@ -613,6 +670,45 @@ namespace gdpm::package{
 	}
 
 
+	error clean(
+		const config::context& config,
+		const title_list& package_titles
+	){
+		if(package_titles.empty()){
+			if(!config.skip_prompt){
+				if(!utils::prompt_user_yn("Are you sure you want to clean all temporary files? (Y/n)")){
+					return error();
+				}
+			}
+			std::filesystem::remove_all(config.tmp_dir);
+			return error();
+		}
+		
+		/* Find the path of each packages is_installed then delete temporaries */
+		log::info_n("Cleaning temporary files...");
+		for(const auto& p_title : package_titles){
+			string tmp_zip = config.tmp_dir + "/" + p_title + ".zip";
+			if(config.verbose > 0)
+				log::info("Removed '{}'", tmp_zip);
+			std::filesystem::remove_all(tmp_zip);
+		}
+		log::println("Done.");
+		return error();
+	}
+
+
+	error purge(const config::context& config){
+		if(!config.skip_prompt){
+			if(!utils::prompt_user_yn("Are you sure you want to purge all installed packages? (Y/n)")){
+				return error();
+			}
+		}
+		/* Remove all packages installed in global location */
+		std::filesystem::remove_all(config.packages_dir);
+		return cache::drop_package_database();
+	}
+
+
 	error link(
 		const config::context& config,
 		const title_list& package_titles, 
@@ -622,7 +718,7 @@ namespace gdpm::package{
 
 		if(params.paths.empty()){
 			return log::error_rc(error(
-				constants::error::PATH_NOT_DEFINED,
+				constants::error::MALFORMED_PATH,
 				"Path is required"
 			));
 		}
@@ -685,7 +781,7 @@ namespace gdpm::package{
 
 		if(params.paths.empty()){
 			return log::error_rc(error(
-				constants::error::PATH_NOT_DEFINED,
+				constants::error::MALFORMED_PATH,
 				"Path is required"
 			));
 		}
@@ -738,6 +834,88 @@ namespace gdpm::package{
 		}
 		return error();
 	}
+
+
+	result_t<info_list> fetch(
+		const config::context& config,
+		const title_list& package_titles
+	){
+		using namespace rapidjson;
+
+		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
+		rest_api_params.page 	= 0;
+		int page 				= 0;
+		int page_length 		= 0;
+		int total_items 		= 0;
+		int items_left 			= 0;
+		// int total_pages = 0;
+
+		log::info_n("Sychronizing database...");
+		do{
+			/* Make the GET request to get page data and store it in the local 
+			package database. Also, check to see if we need to keep going. */
+			string url{constants::HostUrl + rest_api::endpoints::GET_Asset};
+			Document doc = rest_api::get_assets_list(url, rest_api_params);
+			rest_api_params.page += 1;
+
+			if(doc.IsNull()){
+				log::println("");
+				return result_t(info_list(), log::error_rc(
+					ec::EMPTY_RESPONSE,
+					"Could not get response from server. Aborting."
+				));
+			}
+
+			/* Need to know how many pages left to get and how many we get per 
+			request. */
+			page 		= doc["page"].GetInt();
+			page_length = doc["page_length"].GetInt();
+			// total_pages = doc["pages"].GetInt();
+			total_items = doc["total_items"].GetInt();
+			items_left 	= total_items - (page + 1) * page_length;
+
+			// log::info("page: {}, page length: {}, total pages: {}, total items: {}, items left: {}", page, page_length, total_pages, total_items, items_left);
+
+			if(page == 0){
+				error error;
+				error = cache::drop_package_database();
+				error = cache::create_package_database();
+			}
+
+			info_list packages;
+			for(const auto& o : doc["result"].GetArray()){
+				// log::println("=======================");
+				info p{
+					.asset_id 		= std::stoul(o["asset_id"].GetString()),
+					.title 			= o["title"].GetString(),
+					.author 		= o["author"].GetString(),
+					.author_id 		= std::stoul(o["author_id"].GetString()),
+					.version 		= o["version"].GetString(),
+					.godot_version 	= o["godot_version"].GetString(),
+					.cost 			= o["cost"].GetString(),
+					.modify_date 	= o["modify_date"].GetString(),
+					.category		= o["category"].GetString(),
+					.remote_source	= url
+				};
+				packages.emplace_back(p);
+			}
+			error error = cache::insert_package_info(packages);
+			if (error.has_occurred()){
+				log::error(error);
+				/* FIXME: Should this stop here or keep going? */
+			}
+			/* Make the same request again to get the rest of the needed data 
+			using the same request, but with a different page, then update 
+			variables as needed. */
+
+
+		} while(items_left > 0);
+
+		log::println("Done.");
+
+		return cache::get_package_info_by_title(package_titles);
+	}
+
 
 	void print_list(const info_list& packages){
 		for(const auto& p : packages){
@@ -856,26 +1034,6 @@ namespace gdpm::package{
 	}
 
 
-	void clean_temporary(
-		const config::context& config,
-		const title_list& package_titles
-	){
-		if(package_titles.empty()){
-			log::info("No temporary files found to clean.");
-			std::filesystem::remove_all(config.tmp_dir);
-		}
-		/* Find the path of each packages is_installed then delete temporaries */
-		log::info_n("Cleaning temporary files...");
-		for(const auto& p_title : package_titles){
-			string tmp_zip = config.tmp_dir + "/" + p_title + ".zip";
-			if(config.verbose > 0)
-				log::info("Removed '{}'", tmp_zip);
-			std::filesystem::remove_all(tmp_zip);
-		}
-		log::println("Done.");
-	}
-
-
 	template <typename T>
 	auto set_if_key_exists(
 		const var_opts& o,
@@ -883,89 +1041,6 @@ namespace gdpm::package{
 		T& p
 	){
 		if(o.count(k)){ p = std::get<T>(o.at(k)); }
-	}
-
-
-	result_t<info_list> synchronize_database(
-		const config::context& config,
-		const title_list& package_titles
-	){
-		using namespace rapidjson;
-
-		rest_api::request_params rest_api_params = rest_api::make_from_config(config);
-		rest_api_params.page 	= 0;
-		int page 				= 0;
-		int page_length 		= 0;
-		int total_items 		= 0;
-		int items_left 			= 0;
-		// int total_pages = 0;
-
-		log::info("Sychronizing database...");
-		do{
-			/* Make the GET request to get page data and store it in the local 
-			package database. Also, check to see if we need to keep going. */
-			std::string url{constants::HostUrl};
-			url += rest_api::endpoints::GET_Asset;
-			Document doc = rest_api::get_assets_list(url, rest_api_params);
-			rest_api_params.page += 1;
-
-			if(doc.IsNull()){
-				error error(
-					constants::error::EMPTY_RESPONSE,
-					"Could not get response from server. Aborting."
-				);
-				log::error(error);
-				return result_t(info_list(), error);
-			}
-
-			/* Need to know how many pages left to get and how many we get per 
-			request. */
-			page 		= doc["page"].GetInt();
-			page_length = doc["page_length"].GetInt();
-			// total_pages = doc["pages"].GetInt();
-			total_items = doc["total_items"].GetInt();
-			items_left 	= total_items - (page + 1) * page_length;
-
-			// log::info("page: {}, page length: {}, total pages: {}, total items: {}, items left: {}", page, page_length, total_pages, total_items, items_left);
-
-			if(page == 0){
-				error error;
-				error = cache::drop_package_database();
-				error = cache::create_package_database();
-			}
-
-			info_list packages;
-			for(const auto& o : doc["result"].GetArray()){
-				// log::println("=======================");
-				info p{
-					.asset_id 		= std::stoul(o["asset_id"].GetString()),
-					.title 			= o["title"].GetString(),
-					.author 		= o["author"].GetString(),
-					.author_id 		= std::stoul(o["author_id"].GetString()),
-					.version 		= o["version"].GetString(),
-					.godot_version 	= o["godot_version"].GetString(),
-					.cost 			= o["cost"].GetString(),
-					.modify_date 	= o["modify_date"].GetString(),
-					.category		= o["category"].GetString(),
-					.remote_source	= url
-				};
-				packages.emplace_back(p);
-			}
-			error error = cache::insert_package_info(packages);
-			if (error.has_occurred()){
-				log::error(error);
-				/* FIXME: Should this stop here or keep going? */
-			}
-			/* Make the same request again to get the rest of the needed data 
-			using the same request, but with a different page, then update 
-			variables as needed. */
-
-
-		} while(items_left > 0);
-
-		log::println("Done.");
-
-		return cache::get_package_info_by_title(package_titles);
 	}
 
 

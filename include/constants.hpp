@@ -36,8 +36,8 @@ namespace gdpm::print{
 #define GDPM_CONFIG_REMOTE_SOURCES std::pair<std::string, std::string>(constants::RemoteName, constants::HostUrl)
 #define GDPM_CONFIG_THREADS 1
 #define GDPM_CONFIG_TIMEOUT_MS 30000
-#define GDPM_CONFIG_ENABLE_SYNC 1
-#define GDPM_CONFIG_ENABLE_FILE_LOGGING 0
+#define GDPM_CONFIG_ENABLE_SYNC true
+#define GDPM_CONFIG_ENABLE_FILE_LOGGING true
 #define GDPM_CONFIG_VERBOSE 0
 
 /* Defines the default package cache for local storage */

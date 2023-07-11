@@ -106,18 +106,15 @@ namespace gdpm::config{
 			ParseErrorCode status = doc.Parse(contents.c_str()).GetParseError();
 
 			if(!doc.IsObject()){
-				error error(
-					constants::error::FILE_NOT_FOUND,
+				return log::error_rc(
+					ec::FILE_NOT_FOUND,
 					"Could not load config file."
 				);
-				log::error(error);
-				return error;
 			}
 
 			error error = validate(doc);
-			if(error()){
-				log::error(error);
-				return error;
+			if(error.has_occurred()){
+				return log::error_rc(error);
 			}
 
 			/* Make sure contents were read correctly. */
@@ -138,12 +135,10 @@ namespace gdpm::config{
 						);
 					}
 				} else {
-					gdpm::error error(
-						constants::error::INVALID_KEY,
+					return log::error_rc(
+						ec::INVALID_KEY,
 						"Could not read key `remote_sources`."
 					);
-					log::error(error);
-					return error;
 				}
 			}
 			auto _get_value_string = [](Document& doc, const char *property){

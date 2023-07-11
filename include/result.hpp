@@ -2,13 +2,12 @@
 
 #include "log.hpp"
 #include "error.hpp"
-#include "types.hpp"
 #include <functional>
 #include <type_traits>
 
 namespace gdpm{
 	
-	template <class T, error_t U = error>
+	template <class T, concepts::error_t U = error>
 	class result_t {
 	public:
 		result_t() = delete;
@@ -35,13 +34,14 @@ namespace gdpm{
 			fn_error = error;
 		}
 
+		constexpr U get_error() const{
+			return std::get<U>(data);
+		}
+
 		constexpr std::unique_ptr<T> unwrap() const { 
 			/* First, check if ok() and error() are defined. */
 			if(!fn_error || !fn_ok){
-				error error(
-					constants::error::NOT_DEFINED
-				);
-				log::error(error);
+				log::error(error(ec::NOT_DEFINED));
 				return nullptr;
 			}
 			/* Then, attempt unwrap the data. */

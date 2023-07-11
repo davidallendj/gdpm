@@ -1,5 +1,6 @@
 #pragma once
 
+#include <rapidjson/document.h>
 #include <tuple>
 #include <functional>
 #include <type_traits>
@@ -41,13 +42,11 @@ namespace gdpm{
 		SIZE_T		= 6,
 	};
 
-	template <typename T>
-	concept error_t = requires{ std::is_same<error, T>::value; };
-
 	using string 		= std::string;
 	using string_list 	= std::vector<string>;
 	using string_map 	= std::unordered_map<string, string>;
 	using string_pair 	= std::pair<string, string>;
+	using id_list		= std::vector<int>;
 	using any			= std::any;
 	using var 			= std::variant<int, float, bool, string, string_list, string_map, size_t>;
 	template <typename T = var> 
@@ -65,6 +64,15 @@ namespace gdpm{
 	template <typename T = error>
 	using _task_list 	= std::vector<std::future<T>>;
 	using task_list 	= _task_list<error>;
+	template <typename T>
+	using ptr = std::unique_ptr<T>;
+	namespace json{
+		using document	= rapidjson::Document;
+		using documents = std::vector<rapidjson::Document>;
+	}
+	namespace concepts{
+		template <typename...Args> concept require_min_args = requires (std::size_t min){ sizeof...(Args) > min; };
+	}
 
 	inline string_list unwrap(const var_args& args){
 		string_list sl;

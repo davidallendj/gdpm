@@ -63,25 +63,29 @@ namespace gdpm::rest_api{
 	};
 
 	request_params make_from_config(const config::context& config);
-	string to_json(const rapidjson::Document& doc);
+	string to_json(const json::document& doc);
 	string to_string(type_e type);
 	string to_string(support_e support);
 	string to_string(sort_e sort);
 	error print_params(const request_params& params, const string& filter = "");
 	error print_asset(const request_params& params, const string& filter = "", const print::style& style = print::style::list);
-	rapidjson::Document _parse_json(const string& r, int verbose = 0);
+	json::document _parse_json(const string& r, int verbose = 0);
 	string _prepare_request(const string& url, const request_params& context, const string& filter);
 
 	bool register_account(const string& username, const string& password, const string& email);
 	bool login(const string& username, const string& password);
 	bool logout();
 
-	rapidjson::Document configure(const string& url = constants::HostUrl, type_e type = any, int verbose = 0);
-	rapidjson::Document get_assets_list(const string& url, const request_params& params = {}, const string& filter = "");
-	rapidjson::Document get_asset(const string& url, int asset_id, const request_params& params = {}, const string& filter = "");
+	json::document configure(const string& url = constants::HostUrl, type_e type = any, int verbose = 0);
+	json::document get_assets_list(const string& url, const request_params& params = {}, const string& filter = "");
+	json::document get_asset(const string& url, int asset_id, const request_params& params = {}, const string& filter = "");
 	bool delete_asset(int asset_id);				// ...for moderators
 	bool undelete_asset(int asset_id);				// ...for moderators
 	bool set_support_level(int asset_id);			// ...for moderators
+
+	namespace multi{
+		json::documents get_assets(const string_list& urls, id_list aset_ids, const request_params& api_params, const string_list& filters);
+	}
 	
 	/*
 	POST /asset

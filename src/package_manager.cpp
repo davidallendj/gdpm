@@ -111,6 +111,7 @@ namespace gdpm::package_manager{
 		ArgumentParser update_command("update");
 		ArgumentParser search_command("search");
 		ArgumentParser export_command("export");
+		ArgumentParser purge_command("purge");
 		ArgumentParser list_command("list");
 		ArgumentParser link_command("link");
 		ArgumentParser clone_command("clone");
@@ -150,16 +151,16 @@ namespace gdpm::package_manager{
 			.implicit_value(true)
 			.default_value(false)
 			.nargs(0);
-		install_command.add_argument("--disable-sync")
+		install_command.add_argument("--sync")
 			.help("enable syncing with remote before installing")
 			.implicit_value(true)
-			.default_value(false)
-			.nargs(0);
-		install_command.add_argument("--disable-cache")
+			.default_value(true)
+			.nargs(nargs_pattern::any);
+		install_command.add_argument("--cache")
 			.help("disable caching asset data")
 			.implicit_value(true)
 			.default_value(false)
-			.nargs(0);
+			.nargs(nargs_pattern::any);
 		install_command.add_argument("--remote")
 			.help("set the remote to use")
 			.nargs(1);
@@ -200,17 +201,25 @@ namespace gdpm::package_manager{
 		remove_command.add_description("remove package(s)");
 		remove_command.add_argument("packages")
 			.nargs(nargs_pattern::any);
-		remove_command.add_argument("--clean");
+		remove_command.add_argument("--clean")
+			.help("clean temporary files")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
 		remove_command.add_argument("-y", "--skip-prompt");
 		remove_command.add_argument("-f", "--file")
 			.help("set the file(s) to read as input")
 			.append()
-			.nargs(nargs_pattern::at_least_one);
+			.nargs(1);
 		
 		update_command.add_description("update package(s)");
 		update_command.add_argument("packages")
 			.nargs(nargs_pattern::any);
-		update_command.add_argument("--clean");
+		update_command.add_argument("--clean")
+			.help("clean temporary files")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
 		update_command.add_argument("--remote");
 		update_command.add_argument("-f", "--file")
 			.help("set the file(s) to read as input")
@@ -301,8 +310,19 @@ namespace gdpm::package_manager{
 		clean_command.add_description("clean package(s) temporary files");
 		clean_command.add_argument("packages")
 			.help("package(s) to clean")
-			.required()
-			.nargs(nargs_pattern::at_least_one);
+			.nargs(nargs_pattern::any);
+		clean_command.add_argument("-y", "--skip-prompt")
+			.help("skip the yes/no prompt")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
+		
+		purge_command.add_description("purge cache database");
+		purge_command.add_argument("-y", "--skip-prompt")
+			.help("skip the yes/no prompt")
+			.implicit_value(true)
+			.default_value(false)
+			.nargs(0);
 
 		fetch_command.add_description("fetch and sync asset data");
 		fetch_command.add_argument("remote")
@@ -362,6 +382,7 @@ namespace gdpm::package_manager{
 		program.add_subparser(update_command);
 		program.add_subparser(search_command);
 		program.add_subparser(export_command);
+		program.add_subparser(purge_command);
 		program.add_subparser(list_command);
 		program.add_subparser(link_command);
 		program.add_subparser(clone_command);
@@ -377,25 +398,41 @@ namespace gdpm::package_manager{
 			program.parse_args(argc, argv);
 			// program.parse_known_args(argc, argv);
 		} catch(const std::runtime_error& e){
-			return log::error_rc(error(
-				constants::error::ARGPARSE_ERROR,
-				 e.what())
-			);
+			return log::error_rc(ec::ARGPARSE_ERROR, e.what());
 		}
 
 		if(program.is_subcommand_used(install_command)){
 			action = action_e::install;
-			if(install_command.is_used("packages"))
-				package_titles = install_command.get<string_list>("packages");
+			// if(install_command.is_used("packages"))
+			// 	package_titles = install_command.get<string_list>("packages");
+			package_titles = get_values_from_parser(install_command);
 			set_if_used(install_command, config.rest_api_params.godot_version, "godot-version");
 			set_if_used(install_command, config.clean_temporary, "clean");
-			set_if_used(install_command, config.enable_sync, "disable-sync");
-			set_if_used(install_command, config.enable_cache, "disable-cache");
+			// set_if_used(install_command, config.enable_sync, "disable-sync");
+			// set_if_used(install_command, config.enable_cache, "disable-cache");
 			set_if_used(install_command, params.remote_source, "remote");
 			set_if_used(install_command, config.jobs, "jobs");
 			set_if_used(install_command, config.skip_prompt, "skip-prompt");
 			set_if_used(install_command, params.input_files, "file");
 			set_if_used(install_command, config.timeout, "timeout");
+			if(install_command.is_used("sync")){
+				string sync = install_command.get<string>("sync");
+				if(!sync.compare("enable") || !sync.compare("true") || sync.empty()){
+					config.enable_sync = true;
+				}
+				else if(!sync.compare("disable") || !sync.compare("false")){
+					config.enable_sync = false;
+				}
+			}
+			if(install_command.is_used("cache")){
+				string cache = install_command.get<string>("sync");
+				if(!cache.compare("enable") || !cache.compare("true") || cache.empty()){
+					config.enable_sync = true;
+				}
+				else if(!cache.compare("disable") || !cache.compare("false")){
+					config.enable_sync = false;
+				}
+			}
 		}
 		else if(program.is_subcommand_used(get_command)){
 			action = action_e::get;
@@ -437,6 +474,15 @@ namespace gdpm::package_manager{
 			action = action_e::p_export;
 			params.paths = export_command.get<string_list>("paths");
 		}
+		else if(program.is_subcommand_used(clean_command)){
+			action = action_e::clean;
+			package_titles = get_values_from_parser(clean_command);
+			set_if_used(clean_command, config.skip_prompt, "skip-prompt");
+		}
+		else if(program.is_subcommand_used(purge_command)){
+			action = action_e::purge;
+			set_if_used(purge_command, config.skip_prompt, "skip-prompt");
+		}
 		else if(program.is_subcommand_used(list_command)){
 			action = action_e::list;
 			if(list_command.is_used("show"))
@@ -470,10 +516,6 @@ namespace gdpm::package_manager{
 			if(clone_command.is_used("path")){
 				params.paths = clone_command.get<string_list>("path");
 			}
-		}
-		else if(program.is_subcommand_used(clean_command)){
-			action = action_e::clean;
-			package_titles = get_values_from_parser(clean_command);
 		}
 		else if(program.is_subcommand_used(config_command)){
 			if(config_command.is_used("style")){
@@ -550,15 +592,16 @@ namespace gdpm::package_manager{
 			case action_e::update:			package::update(config, package_titles, params); break;
 			case action_e::search: 			package::search(config, package_titles, params); break;
 			case action_e::p_export:		package::export_to(params.paths); break;
+			case action_e::purge:			package::purge(config); break;
 			case action_e::list: 			package::list(config, params); break;
 											/* ...opts are the paths here */
 			case action_e::link:			package::link(config, package_titles, params); break;
 			case action_e::clone:			package::clone(config, package_titles, params); break;
-			case action_e::clean:			package::clean_temporary(config, package_titles); break;
+			case action_e::clean:			package::clean(config, package_titles); break;
 			case action_e::config_get:		config::print_properties(config, params.args); break;
 			case action_e::config_set:		config::set_property(config, params.args[0], params.args[1]); break;
-			case action_e::fetch:			package::synchronize_database(config, package_titles); break;
-			case action_e::sync: 			package::synchronize_database(config, package_titles); break;
+			case action_e::fetch:			package::fetch(config, package_titles); break;
+			case action_e::sync: 			package::fetch(config, package_titles); break;
 			case action_e::remote_list:		remote::print_repositories(config); break;
 			case action_e::remote_add: 		remote::add_repository(config, params.args); break;
 			case action_e::remote_remove: 	remote::remove_respositories(config, params.args); break;

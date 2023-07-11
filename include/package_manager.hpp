@@ -27,6 +27,7 @@ namespace gdpm::package_manager {
 		update, 
 		search, 
 		p_export, /* reserved keyword */
+		purge,
 		list, 
 		link,
 		clone,
