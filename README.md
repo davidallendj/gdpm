@@ -359,8 +359,6 @@ $ gdpm config set username towk
 
 *   Logging doesn't write to file.
 
-*   Installing with parallel downloads does not work correctly. Either set `-j/--jobs 1` or run the install command twice as a workaround.
-
 *   Download progress bars are not showing when downloading archives. This is being reworked to display multiple bars dynamically to better show download status.
 
 ## License
