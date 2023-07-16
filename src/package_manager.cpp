@@ -85,6 +85,14 @@ namespace gdpm::package_manager{
 		}
 	};
 
+	template <typename T, typename String = string>
+	auto set_if_used_limit(
+		const argparse::ArgumentParser& cmd,
+		T& value,
+		const String& arg
+	){
+
+	}
 
 	string_list get_values_from_parser(
 		const argparse::ArgumentParser& cmd,
@@ -412,6 +420,8 @@ namespace gdpm::package_manager{
 			// set_if_used(install_command, config.enable_cache, "disable-cache");
 			set_if_used(install_command, params.remote_source, "remote");
 			set_if_used(install_command, config.jobs, "jobs");
+			if(install_command.is_used("jobs"))
+				config.jobs = std::clamp(install_command.get<int>("jobs"), GDPM_MIN_JOBS, GDPM_MAX_JOBS);
 			set_if_used(install_command, config.skip_prompt, "skip-prompt");
 			set_if_used(install_command, params.input_files, "file");
 			set_if_used(install_command, config.timeout, "timeout");

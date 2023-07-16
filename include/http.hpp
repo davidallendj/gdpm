@@ -136,54 +136,49 @@ namespace gdpm::http{
 	// 	option::ForegroundColor{Color::green},
 	// 	option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
 	// };
-
-	struct transfer : public non_copyable{
-		transfer(){ curl = curl_easy_init(); }
-		transfer(transfer&&){}
-		~transfer(){ }
-
-		CURLcode res;
-		int id;
-		CURL *curl = nullptr;
-		FILE *fp = nullptr;
-		utils::memory_buffer data = {0};
-
-	};
-	using transfers = std::vector<transfer>;
 	using responses = std::vector<response>;
 
 	class context : public non_copyable{
 	public:
-		context();
+		context(int max_transfers = 1);
 		~context();
 
 		string url_escape(const string& url);
 		response request(const string& url, const http::request& params = http::request());
+		responses requests(const string_list& urls, const http::request& params = http::request());
 		response download_file(const string& url, const string& storage_path, const http::request& params = http::request());
+		responses download_files(const string_list& url, const string_list& storage_path, const http::request& params = http::request());
 		long get_download_size(const string& url);
 		long get_bytes_downloaded(const string& url);
+		void set_max_transfers(int max_transfers);
 
 	private:
 		CURL *curl = nullptr;
-	};
-
-
-	class multi{
-	public:
-		multi(long max_allowed_transfers = 2);
-		~multi();
-		string url_escape(const string& url);
-		ptr<transfers> make_requests(const string_list& urls, const http::request& params = http::request());
-		ptr<transfers> make_downloads(const string_list& url, const string_list& storage_path, const http::request& params = http::request());
-		ptr<responses> execute(ptr<transfers> transfers, size_t timeout = 1000);
-	
-	private:
-		DynamicProgress<BlockProgressBar> progress_bars;
 		CURLM *cm = nullptr;
 		CURLMsg *cmessage = nullptr;
 		CURLMcode cres;
-		int messages_left = -1;
+		int max_transfers = 1;
+		int transfers_index = 0;
+		int transfers_left = -1;
+		DynamicProgress<BlockProgressBar> progress_bars;
+
 	};
+
+
+	// class multi{
+	// public:
+	// 	multi(long max_allowed_transfers = 2);
+	// 	~multi();
+	// 	string url_escape(const string& url);
+	// 	ptr<responses> execute(ptr<transfers> transfers, size_t timeout = 1000);
+	// 	void cleanup();
+	
+	// private:
+	// 	CURLM *cm = nullptr;
+	// 	CURLMsg *cmessage = nullptr;
+	// 	CURLMcode cres;
+	// 	int transfers_left = -1;
+	// };
 
 	curl_slist* add_headers(CURL *curl, const headers_t& headers);
 	static size_t write_to_buffer(char *contents, size_t size, size_t nmemb, void *userdata);

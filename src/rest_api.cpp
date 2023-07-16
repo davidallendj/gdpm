@@ -246,7 +246,7 @@ namespace gdpm::rest_api{
 					"multi::get_assets(): urls.size() != filters.size()"
 				);
 			}
-			http::multi http;
+			http::context http(4);
 			http::request params;
 			json::documents docs;
 			params.headers.insert(http::header("Accept", "*/*"));
@@ -269,9 +269,8 @@ namespace gdpm::rest_api{
 			}
 			
 			/* Parse JSON string into objects */
-			ptr<http::transfers> transfers = http.make_requests(prepared_urls, params);
-			ptr<http::responses> responses = http.execute(std::move(transfers));
-			for(const auto& response : *responses){
+			http::responses responses = http.requests(prepared_urls, params);
+			for(const auto& response : responses){
 				docs.emplace_back(_parse_json(response.body));
 			}
 			return docs;

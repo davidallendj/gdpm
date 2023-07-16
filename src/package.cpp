@@ -83,12 +83,6 @@ namespace gdpm::package{
 				table[index][3].format().font_align(FontAlign::center);
 				table[index][4].format().font_align(FontAlign::center);
 				table[index][6].format().font_align(FontAlign::center);
-
-				// string output(p.title + GDPM_COLOR_CYAN " v" + p.version + GDPM_COLOR_RESET);
-				// output += GDPM_COLOR_BLUE " last updated: " + p.modify_date + GDPM_COLOR_RESET;
-				// output += (p.is_installed) ? GDPM_COLOR_LIGHT_CYAN " (reinstall)" : "";
-				// output += GDPM_COLOR_RESET;
-				// log::print("    {}\n", output);
 			}
 			table.print(std::cout);
 			log::println("");
@@ -177,14 +171,13 @@ namespace gdpm::package{
 			));
 		}
 
-		/* Attempt to download ZIPs in parallel */
+		/* Download ZIP files using download url */
 		if(config.jobs > 1){
-			http::multi http(config.jobs);
-			ptr<http::transfers> transfers = http.make_downloads(p_download_urls, p_storage_paths);
-			ptr<http::responses> responses = http.execute(std::move(transfers));
+			http::context http(config.jobs);
+			http::responses responses = http.download_files(p_download_urls, p_storage_paths);
 			
 			/* Check for HTTP response errors */
-			for(const auto& r : *responses){
+			for(const auto& r : responses){
 				if(r.code != http::OK){
 					log::error(error(ec::HTTP_RESPONSE_ERR,
 						std::format("HTTP error: {}", r.code)
@@ -339,22 +332,23 @@ namespace gdpm::package{
 		} // for loop
 
 		/* Get the packages not found in cache and download */
-		string_list urls;
-		for(const auto& p : p_left){
-			urls.emplace_back(p.download_url);
-		}
-		http::multi http;
-		ptr<http::transfers> transfers = http.make_requests(urls);
-		ptr<http::responses> responses = http.execute(std::move(transfers));
+		{
+			string_list urls;
+			for(const auto& p : p_left){
+				urls.emplace_back(p.download_url);
+			}
+			http::context http;
+			http::responses responses = http.requests(urls);
 
-		for(const auto& response : *responses){
-			if(response.code == http::OK){
-				log::println("Done.");
-			}else{
-				return log::error_rc(error(
-					constants::error::HTTP_RESPONSE_ERR,
-					std::format("HTTP Error: {}", response.code)
-				));
+			for(const auto& response : responses){
+				if(response.code == http::OK){
+					log::println("Done.");
+				}else{
+					return log::error_rc(error(
+						constants::error::HTTP_RESPONSE_ERR,
+						std::format("HTTP Error: {}", response.code)
+					));
+				}
 			}
 		}
 
@@ -434,11 +428,10 @@ namespace gdpm::package{
 				.font_style({FontStyle::underline, FontStyle::bold});
 			for(const auto& p : p_cache){
 				table.add_row({p.title, p.author, p.category, p.version, p.godot_version, p.modify_date, (p.is_installed) ? "✔️": "❌"});
-				// string output(p.title + GDPM_COLOR_CYAN " v" + p.version + GDPM_COLOR_RESET);
-				// output += GDPM_COLOR_BLUE " last updated: " + p.modify_date + GDPM_COLOR_RESET;
-				// output += (p.is_installed) ? GDPM_COLOR_LIGHT_CYAN " (reinstall)" : "";
-				// output += GDPM_COLOR_RESET;
-				// log::print("    {}\n", output);
+				size_t index = table.size() - 1;
+				table[index][3].format().font_align(FontAlign::center);
+				table[index][4].format().font_align(FontAlign::center);
+				table[index][6].format().font_align(FontAlign::center);
 			}
 			table.print(std::cout);
 			log::println("");

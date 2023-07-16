@@ -59,6 +59,9 @@ namespace gdpm::print{
 #define GDPM_DEFAULT_ASSET_REVERSE false
 #define GDPM_DEFAULT_ASSET_VERBOSE 0
 
+#define GDPM_MIN_JOBS 1
+#define GDPM_MAX_JOBS 1024
+
 /* Define misc. macros */
 #if defined(_WIN32)
 	#define GDPM_DLL_EXPORT __declspec(dllexport)
