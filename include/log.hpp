@@ -94,7 +94,7 @@ namespace gdpm::log
 		set_prefix_if(fmt::format( get_info_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			fmt::format("{}{}{}{}{}", GDPM_COLOR_LOG_INFO, prefix.contents, format, suffix, GDPM_COLOR_LOG_RESET),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -108,7 +108,7 @@ namespace gdpm::log
 		set_prefix_if(fmt::format(get_info_prefix(), utils::timestamp()), true);
 		set_suffix_if("", true);
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_INFO "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			fmt::format("{}{}{}{}{}", GDPM_COLOR_LOG_INFO, prefix.contents, format, suffix, GDPM_COLOR_LOG_RESET),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -122,7 +122,7 @@ namespace gdpm::log
 		set_prefix_if(std::format(get_error_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_ERROR "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			std::format("{}{}{}{}{}", GDPM_COLOR_LOG_ERROR, prefix.contents, format, suffix, GDPM_COLOR_LOG_RESET),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -136,7 +136,7 @@ namespace gdpm::log
 		set_prefix_if(std::format(get_debug_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_DEBUG "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			std::format("{}{}{}", GDPM_COLOR_LOG_DEBUG, prefix.contents, format, suffix, GDPM_COLOR_LOG_RESET),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -150,7 +150,7 @@ namespace gdpm::log
 		set_prefix_if(std::format(get_warning_prefix(), utils::timestamp()), true);
 		set_suffix_if("\n");
 		vlog(
-			fmt::format(GDPM_COLOR_LOG_WARNING "{}{}{}" GDPM_COLOR_LOG_RESET, prefix.contents, format, suffix),
+			std::format("{}{}{}", GDPM_COLOR_LOG_WARNING, prefix.contents, format, suffix, GDPM_COLOR_LOG_RESET),
 			fmt::make_format_args(args...)
 		);
 #endif
@@ -160,7 +160,7 @@ namespace gdpm::log
 	template <typename S, typename...Args>
 	static constexpr void print(const S& format, Args&&...args){
 		vlog(
-			fmt::format("{}", format),
+			std::format("{}", format),
 			fmt::make_format_args(args...)
 		);
 	}
@@ -168,7 +168,7 @@ namespace gdpm::log
 	template <typename S = string, typename...Args>
 	static constexpr void println(const S& format, Args&&...args){
 		vlog(
-			fmt::format("{}\n", format),
+			std::format("{}\n", format),
 			fmt::make_format_args(args...)
 		);
 	}

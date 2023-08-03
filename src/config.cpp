@@ -262,8 +262,7 @@ namespace gdpm::config{
 		else if(property == "verbosity")			config.verbose			= std::stoi(value);
 		else if(property == "style")				config.style			= to_style(value);
 		else{
-			return log::error_rc(error(
-				constants::error::INVALID_CONFIG,
+			return log::error_rc(error(ec::INVALID_CONFIG,
 				"Could not find property"
 			));
 		}
@@ -331,7 +330,7 @@ namespace gdpm::config{
 
 
 	error validate(const rapidjson::Document& doc){
-		error error(constants::error::INVALID_CONFIG, "");
+		error error(ec::INVALID_CONFIG, "");
 		if(!doc.IsObject()){
 			error.set_message("Document is not a JSON object.");
 			return error;
@@ -344,7 +343,7 @@ namespace gdpm::config{
 			error.set_message("Key `remote_sources` is not a JSON object.");
 			return error;
 		}
-		error.set_code(constants::error::NONE);
+		error.set_code(ec::NONE);
 		return error;
 	}
 

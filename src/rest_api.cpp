@@ -242,9 +242,8 @@ namespace gdpm::rest_api{
 			const string_list& filters
 		){
 			if(urls.size() == asset_ids.size() && urls.size() == filters.size()){
-				log::error(ec::ASSERTION_FAILED,
-					"multi::get_assets(): urls.size() != filters.size()"
-				);
+				log::error(error(ec::ASSERTION_FAILED,
+					"multi::get_assets(): urls.size() != filters.size()"));
 			}
 			http::context http(4);
 			http::request params;

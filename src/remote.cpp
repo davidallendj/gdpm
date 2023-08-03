@@ -16,8 +16,7 @@ namespace gdpm::remote{
 		/* Check if enough args were provided. */
 		log::println("arg count: {}\nargs: {}", args.size(), utils::join(args));
 		if (args.size() < 2){
-			return error(
-				constants::error::INVALID_ARG_COUNT,
+			return error(ec::INVALID_ARG_COUNT,
 				"Requires a remote name and url argument"
 			);
 		}
@@ -35,8 +34,7 @@ namespace gdpm::remote{
 	){
 		log::println("arg count: {}\nargs: {}", args.size(), utils::join(args));
 		if(args.size() < 1){
-			return error(
-				constants::error::INVALID_ARG_COUNT,
+			return error(ec::INVALID_ARG_COUNT,
 				"Requires at least one remote name argument"
 			);
 		}

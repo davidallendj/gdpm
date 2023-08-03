@@ -173,7 +173,7 @@ namespace gdpm::cache{
 		sql += "COMMIT;\n";
 		rc = sqlite3_exec(db, sql.c_str(), callback, (void*)&p_vector, &errmsg);
 		if(rc != SQLITE_OK){
-			error error(constants::error::SQLITE_ERR, std::format(
+			error error(ec::SQLITE_ERR, std::format(
 				"cache::get_package_info_by_id::sqlite3_exec(): {}", errmsg
 			));
 			sqlite3_free(errmsg);

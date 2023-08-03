@@ -10,7 +10,7 @@
 
 namespace gdpm::constants::error{
 
-	enum {
+	enum class ec{
 		NONE = 0,
 		UNKNOWN,
 		UNKNOWN_COMMAND,
@@ -75,36 +75,40 @@ namespace gdpm::constants::error{
 	};
 
 
-	inline string get_message(int error_code) {
+	inline string get_message(ec error_code) {
 		string message{};
-		try{ message = messages[error_code]; }
+		try{ message = messages[(int)error_code]; }
 		catch(const std::bad_alloc& e){
 			log::error("No default message for error code.");
 		}
 		return message;
 	}
+
+	template <typename T>
+	inline T to(ec c){ return fmt::underlying_t<T>(c); }
 }; 
 
 namespace gdpm{
-	namespace ec = constants::error;
+	using ec = constants::error::ec;
+	namespace ce = constants::error;
 	class error {
 	public:
-		constexpr explicit error(int code = 0, const string& message = "{default}"):
+		constexpr explicit error(ec code = ec::NONE, const string& message = "{default}"):
 			m_code(code), 
-			m_message(utils::replace_all(message, "{default}", ec::get_message(code)))
+			m_message(utils::replace_all(message, "{default}", ce::get_message(code)))
 		{}
 
-		void set_code(int code) { m_code = code; }
+		void set_code(ec code) { m_code = code; }
 		void set_message(const string& message) { m_message = message; }
 
-		int get_code() const { return m_code; }
+		ec get_code() const { return m_code; }
 		string get_message() const { return m_message; }
-		bool has_occurred() const { return m_code != 0; }
+		bool has_occurred() const { return (int)m_code != 0; }
 
 		bool operator()(){ return has_occurred(); }
 	
 	private:
-		int m_code;
+		ec m_code;
 		string m_message;
 	};
 
@@ -115,7 +119,7 @@ namespace gdpm{
 			set_prefix_if(std::format("[ERROR {}] ", utils::timestamp()), true);
 			set_suffix_if("\n");
 			vlog(
-				fmt::format(GDPM_COLOR_LOG_ERROR "{}{}\n" GDPM_COLOR_LOG_RESET, prefix.contents, e.get_message()),
+				fmt::format("{}{}{}{}\n", GDPM_COLOR_LOG_ERROR, prefix.contents, e.get_message(), GDPM_COLOR_LOG_RESET),
 				fmt::make_format_args(prefix.contents, e.get_message())
 			);
 #endif
@@ -130,7 +134,7 @@ namespace gdpm{
 			return e;
 		}
 
-		static constexpr gdpm::error error_rc(int code, const string& message = "{default}"){
+		static constexpr gdpm::error error_rc(ec code, const string& message = "{default}"){
 			return error_rc(gdpm::error(code, message));
 		}
 	}

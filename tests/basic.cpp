@@ -80,8 +80,8 @@ TEST_CASE("Test configuration functions"){
 
 	std::string json = config::to_json(config);
 	error error_save = config::save(config.path, config);
-	CHECK(error_save.get_code() == 0);
+	CHECK((int)error_save.get_code() == 0);
 
 	error error_load = config::load(config.path, config);
-	CHECK(error_load.get_code() == 0);
+	CHECK((int)error_load.get_code() == 0);
 }

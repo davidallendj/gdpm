@@ -219,7 +219,7 @@ namespace gdpm::package{
 		error error = cache::update_package_info(p_cache);
 		if(error.has_occurred()){
 			string prefix = std::format(log::get_error_prefix(), utils::timestamp());
-			log::println(GDPM_COLOR_LOG_ERROR"\n{}{}" GDPM_COLOR_RESET, prefix, error.get_message());
+			log::println("\n{}{}{}{}", GDPM_COLOR_LOG_ERROR, prefix, error.get_message(), GDPM_COLOR_RESET);
 			return error;
 		}
 		if(config.clean_temporary){
@@ -287,8 +287,7 @@ namespace gdpm::package{
 			if(is_missing_data){
 				doc = rest_api::get_asset(url, p.asset_id, rest_api_params);
 				if(doc.HasParseError() || doc.IsNull()){
-					return log::error_rc(error(
-						constants::error::JSON_ERR,
+					return log::error_rc(error(ec::JSON_ERR,
 						std::format("Error parsing JSON: {}", GetParseError_En(doc.GetParseError()))
 					));
 				}
@@ -344,8 +343,7 @@ namespace gdpm::package{
 				if(response.code == http::OK){
 					log::println("Done.");
 				}else{
-					return log::error_rc(error(
-						constants::error::HTTP_RESPONSE_ERR,
+					return log::error_rc(error(ec::HTTP_RESPONSE_ERR,
 						std::format("HTTP Error: {}", response.code)
 					));
 				}
@@ -710,8 +708,7 @@ namespace gdpm::package{
 		using namespace std::filesystem;
 
 		if(params.paths.empty()){
-			return log::error_rc(error(
-				constants::error::MALFORMED_PATH,
+			return log::error_rc(error(ec::MALFORMED_PATH,
 				"Path is required"
 			));
 		}
@@ -721,8 +718,7 @@ namespace gdpm::package{
 		info_list p_found = {};
 		info_list p_cache = r_cache.unwrap_unsafe();
 		if(p_cache.empty()){
-			return log::error_rc(error(
-				constants::error::NOT_FOUND,
+			return log::error_rc(error(ec::NOT_FOUND,
 				"Could not find any packages to link in cache."
 			));
 		}
@@ -735,8 +731,7 @@ namespace gdpm::package{
 		}
 
 		if(p_found.empty()){
-			return log::error_rc(error(
-				constants::error::NO_PACKAGE_FOUND,
+			return log::error_rc(error(ec::NO_PACKAGE_FOUND,
 				"No packages found to link."
 			));
 		}
@@ -755,7 +750,7 @@ namespace gdpm::package{
 				std::filesystem::create_directory_symlink(target, symlink_path, ec);
 				if(ec){
 					log::error(error(
-						constants::error::STD_ERR,
+						ec::STD_ERR,
 						std::format("Could not create symlink: {}", ec.message())
 					));
 				}
@@ -774,8 +769,7 @@ namespace gdpm::package{
 
 		if(params.paths.empty()){
 			return log::error_rc(error(
-				constants::error::MALFORMED_PATH,
-				"Path is required"
+				ec::MALFORMED_PATH, "Path is required"
 			));
 		}
 
@@ -785,8 +779,7 @@ namespace gdpm::package{
 
 		/* Check for installed packages to clone */
 		if(p_cache.empty()){
-			return log::error_rc(error(
-				constants::error::NO_PACKAGE_FOUND,
+			return log::error_rc(error(ec::NO_PACKAGE_FOUND,
 				"Could not find any packages to clone in cache."
 			));
 		}
@@ -804,8 +797,7 @@ namespace gdpm::package{
 		}
 
 		if(p_found.empty()){
-			return log::error_rc(error(
-				constants::error::NO_PACKAGE_FOUND,
+			return log::error_rc(error(ec::NO_PACKAGE_FOUND,
 				"No packages found to clone."
 			));
 		}
@@ -913,20 +905,18 @@ namespace gdpm::package{
 	void print_list(const info_list& packages){
 		for(const auto& p : packages){
 			log::println(
-				GDPM_COLOR_BLUE"{}/" 
-				GDPM_COLOR_RESET "{}/{}/{}  " 
-				GDPM_COLOR_GREEN "v{}  " 
-				GDPM_COLOR_CYAN "{}  " 
-				GDPM_COLOR_RESET "Godot {},  {}",
-				p.support_level,
-				p.category,
+				"{}{}/{}/{}/{}  {}\n\tv{}  {}  Godot {}  {}{}",
+				GDPM_COLOR_GREEN, p.support_level,
+				p.category, 
 				p.author,
 				p.title,
+				GDPM_COLOR_CYAN, 
 				p.version,
 				p.modify_date,
 				// p.asset_id,
 				p.godot_version,
-				p.cost
+				p.cost,
+				GDPM_COLOR_RESET
 			);
 		}
 	}
@@ -935,21 +925,18 @@ namespace gdpm::package{
 	void print_list(const rapidjson::Document& json){
 		for(const auto& o : json["result"].GetArray()){
 			log::println(
-				GDPM_COLOR_BLUE"{}/" 
-				GDPM_COLOR_CYAN "{}/" 
-				GDPM_COLOR_RESET "{}/{}  " 
-				GDPM_COLOR_GREEN "v{}  " 
-				GDPM_COLOR_CYAN "{}  " 
-				GDPM_COLOR_RESET "Godot {},  {}",
-				o["support_level"]	.GetString(), 
+				"{}{}/{}/{}/{}  {}\n\tv{}  {}  Godot {}  {}{}",
+				GDPM_COLOR_GREEN, o["support_level"].GetString(), 
 				utils::to_lower(o["category"].GetString()),
-				o["author"]			.GetString(),
-				o["title"]			.GetString(),
-				o["version_string"]	.GetString(), 
-				o["modify_date"]	.GetString(),
-				// o["asset_id"]		.GetString(),
-				o["godot_version"]	.GetString(),
-				o["cost"]			.GetString()
+				o["author"].GetString(),
+				o["title"].GetString(),
+				GDPM_COLOR_CYAN,
+				o["version_string"].GetString(), 
+				o["modify_date"].GetString(),
+				// o["asset_id"].GetString(),
+				o["godot_version"].GetString(),
+				o["cost"].GetString(),
+				GDPM_COLOR_RESET
 			);
 		}
 	}

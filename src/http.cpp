@@ -4,6 +4,7 @@
 #include "log.hpp"
 #include "error.hpp"
 #include <atomic>
+#include <cstdint>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <curl/multi.h>
@@ -74,9 +75,7 @@ namespace gdpm::http{
 			curl_slist_free_all(list);
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
 			if(res != CURLE_OK && params.verbose > 0)
-				log::error(ec::LIBCURL_ERR,
-					std::format("http::context::request::curl_easy_perform(): {}", curl_easy_strerror(res))
-				);
+				log::error("http::context::request::curl_easy_perform(): {}", (long)curl_easy_strerror(res));
 			curl_easy_cleanup(curl);
 		}
 
@@ -91,7 +90,7 @@ namespace gdpm::http{
 		const http::request& params
 	){
 		if(cm == nullptr){
-			log::error(error(PRECONDITION_FAILED, 
+			log::error(error(ec::PRECONDITION_FAILED, 
 				"http::multi::make_downloads(): multi client not initialized.")
 			);
 		}
@@ -173,7 +172,8 @@ namespace gdpm::http{
 					log::println("transfers left: {}", transfers_left);
 					cres = curl_multi_remove_handle(cm, eh);
 					if(cres != CURLM_OK){
-						log::error("http::context::execute(): curl_multi_remove_handle() returned error {}", cres);
+						log::error(error(ec::LIBCURL_ERR, 
+							std::format("http::context::execute(): curl_multi_remove_handle() returned error {}", (int)cres)));
 					}
 					curl_easy_cleanup(eh);
 					transfers_left -= 1;
@@ -190,13 +190,15 @@ namespace gdpm::http{
 			if(transfers_left){
 				cres = curl_multi_wait(cm, NULL, 0, params.timeout, NULL);
 				if(cres != CURLM_OK){
-					log::error("http::context::execute(): curl_multi_wait() returned an error {}", cres);
+					log::error(error(ec::LIBCURL_ERR,
+						std::format("http::context::execute(): curl_multi_wait() returned an error {}", (int)cres)));
 				}
 			}
 		}while(transfers_left);
 		cres = curl_multi_cleanup(cm);
 		if(cres != CURLM_OK){
-			log::error("http::context::execute(): curl_multi_cleanup() returned an error {}", cres);
+			log::error(error(ec::LIBCURL_ERR,
+				std::format("http::context::execute(): curl_multi_cleanup() returned an error {}", (int)cres)));
 		}
 		return responses();
 	}
@@ -233,9 +235,7 @@ namespace gdpm::http{
 			/* Get response code, process error, save data, and close file. */
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &r.code);
 			if(res != CURLE_OK && params.verbose > 0){
-				log::error(ec::LIBCURL_ERR,
-					std::format("http::context::download_file::curl_easy_perform() failed: {}", curl_easy_strerror(res))
-				);
+				log::error("http::context::download_file::curl_easy_perform() failed: {}", curl_easy_strerror(res));
 			}
 			fclose(fp);
 		}
@@ -285,9 +285,7 @@ namespace gdpm::http{
 				cres = curl_multi_add_handle(cm, curl);
 				curl_slist_free_all(list);
 				if(cres != CURLM_OK){
-					log::error(ec::LIBCURL_ERR,
-						std::format("http::context::make_downloads(): {}", curl_multi_strerror(cres))
-					);
+					log::error("http::context::make_downstd::format(loads(): {}", curl_multi_strerror(cres));
 				}
 			}
 			transfers_index += 1;
@@ -329,7 +327,7 @@ namespace gdpm::http{
 					}
 					cres = curl_multi_remove_handle(cm, eh);
 					if(cres != CURLM_OK){
-						log::error("http::context::execute(): curl_multi_remove_handle() returned error {}", cres);
+						log::error("http::context::execute(): curl_multi_remove_handle() returned error {}", (int)cres);
 					}
 					transfers_left -= 1;
 					curl_easy_cleanup(eh);
@@ -348,13 +346,13 @@ namespace gdpm::http{
 			if(transfers_left){
 				cres = curl_multi_wait(cm, NULL, 0, params.timeout, NULL);
 				if(cres != CURLM_OK){
-					log::error("http::context::execute(): curl_multi_wait() returned an error {}", cres);
+					log::error("http::context::execute(): curl_multi_wait() returned an error {}", (int)cres);
 				}
 			}
 		}while(transfers_left);
 		cres = curl_multi_cleanup(cm);
 		if(cres != CURLM_OK){
-			log::error("http::context::execute(): curl_multi_cleanup() returned an error {}", cres);
+			log::error("http::context::execute(): curl_multi_cleanup() returned an error {}", (int)cres);
 		}
 		return responses();
 	}
