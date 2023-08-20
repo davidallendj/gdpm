@@ -147,7 +147,7 @@ namespace gdpm::rest_api{
 	){
 		using namespace rapidjson;
 			string request_url{constants::HostUrl + rest_api::endpoints::GET_Asset};
-			Document doc = rest_api::get_assets_list(request_url, rest_api_params);
+			Document doc = rest_api::get_assets_list(request_url, rest_api_params, filter);
 			if(doc.IsNull()){
 				return log::error_rc(error(
 					ec::HOST_UNREACHABLE,
