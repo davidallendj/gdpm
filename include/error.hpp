@@ -120,7 +120,7 @@ namespace gdpm{
 			set_suffix_if("\n");
 			vlog(
 				fmt::format("{}{}{}{}\n", GDPM_COLOR_LOG_ERROR, prefix.contents, e.get_message(), GDPM_COLOR_LOG_RESET),
-				fmt::make_format_args(prefix.contents, e.get_message())
+				fmt::make_format_args()
 			);
 #endif
 		}
