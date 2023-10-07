@@ -338,7 +338,9 @@ $ gdpm config set username towk
 
 - [x] Parallel downloading.
 
-- [ ] PKGBUILD for ArchLinux/Manjaro.
+- [X] PKGBUILD for ArchLinux/Manjaro.
+
+- [X] Dockerfile to run in sandbox.
 
 - [ ] Proper updating.
 
