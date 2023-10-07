@@ -53,6 +53,12 @@ function clean(){
 	rm ${script_dir}/../bin/$tests
 }
 
+function checksums(){
+	sha256sums ${script_dir}/../bin/$exe
+	sha256sums ${script_dir}/../bin/$static
+	sha256sums ${script_dir}/../bin/$tests
+}
+
 # Run this script at project root
 #meson configure build
 #CXX=clang++ meson compile -C build -j$(proc)
@@ -118,6 +124,7 @@ do
 		--exe) 		build_exe 	shift;;
 		--libs) 	build_libs 	shift;;
 		--tests) 	build_tests shift;;
+		--sums)		checksums	shift;;
 		-d|--docs)  build_docs 	shift;;
 		-c|--clean) clean 		shift;;
 		-s|--strip) strip_all 	shift;;
