@@ -53,7 +53,7 @@ namespace gdpm::rest_api{
 		int 		support;
 		string 		user			= "";
 		string		cost			= "";
-		string 		godot_version	= "4.0";
+		string 		godot_version	= "4.3";
 		int 		max_results		= 500;
 		int 		page;
 		int			offset;

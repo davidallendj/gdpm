@@ -343,7 +343,7 @@ namespace gdpm::config{
 			error.set_message("Key `remote_sources` is not a JSON object.");
 			return error;
 		}
-		error.set_code(ec::NONE);
+		error.set_code(ec::IGNORE);
 		return error;
 	}
 

@@ -78,6 +78,11 @@ namespace gdpm::utils {
 		return a;
 	}
 
+	template <typename...Args>
+	std::string format(std::string_view fmt, Args&&...args){
+		return std::vformat(fmt, std::make_format_args(args...));
+	}
+
 	bool to_bool(const std::string& s);
 	std::vector<std::string> split_lines(const std::string& contents);
 	std::string readfile(const std::string& path);
@@ -97,6 +102,7 @@ namespace gdpm::utils {
 	std::string join(const std::vector<std::string>& target, const std::string& delimiter = ", ");
 	std::string join(const std::unordered_map<std::string, std::string>& target, const std::string& prefix = "", const std::string& delimiter = "\n");
 	std::string convert_size(long size);
+	
 	// TODO: Add function to get size of decompressed zip
 
 	namespace json {

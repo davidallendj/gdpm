@@ -1,14 +1,20 @@
 #pragma once
 
+#include "error.hpp"
+#include "result.hpp"
+
 #include <string>
 
+
 namespace gdpm::version{
-	struct version_context{
-		int major;
-		int minor;
-		int patch;
+	struct context{
+		int major = 0;
+		int minor = 0;
+		int patch = 0;
+		string commit = "";
 	};
 
-	std::string to_string(const version_context& context);
-	version_context to_version(const std::string& version);
+	std::string to_string(const context& context);
+	result_t<context> to_version(const std::string& version);
+	bool is_valid_version_string(const std::string& version);
 }

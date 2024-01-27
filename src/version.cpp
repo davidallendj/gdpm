@@ -1,16 +1,35 @@
 
+
 #include "version.hpp"
+
+#include <regex>
 
 
 namespace gdpm::version{
+
+	void print(){
+
+	}
 	
-	std::string to_string(const version_context& context){
-		return std::string();
+	string to_string(const context& c){
+		return utils::format("{}.{}.{}", c.major, c.minor, c.patch);
 	}
 
-	version_context to_version(const std::string& version){
-		version_context v;
+	result_t<context> to_version(const string& version){
+		context v;
 
-		return v;
+		// check if string is valid
+		if(!is_valid_version_string(version)){
+			return result_t(context(), error(ec::IGNORE, "invalid version string"));
+		}
+
+		// convert string to version context
+
+
+		return result_t(v, error());
+	}
+
+	bool is_valid_version_string(const string &version){
+		return std::regex_match(version, std::regex("^(\\d+\\.)?(\\d+\\.)?(\\*|\\d+)$"));
 	}
 }

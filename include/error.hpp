@@ -11,7 +11,7 @@
 namespace gdpm::constants::error{
 
 	enum class ec{
-		NONE = 0,
+		IGNORE = 0,
 		UNKNOWN,
 		UNKNOWN_COMMAND,
 		UNKNOWN_ARGUMENT,
@@ -93,7 +93,7 @@ namespace gdpm{
 	namespace ce = constants::error;
 	class error {
 	public:
-		constexpr explicit error(ec code = ec::NONE, const string& message = "{default}"):
+		constexpr explicit error(ec code = ec::IGNORE, const string& message = "{default}"):
 			m_code(code), 
 			m_message(utils::replace_all(message, "{default}", ce::get_message(code)))
 		{}
