@@ -214,7 +214,7 @@ The `gdpm` command takes a single subcommand argument such as `install`, `remove
 
 ### Installing, Removing, Updating, and Listing
 
-Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command.
+Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command. (Note: You might have to run a `gdpm fetch` to update the local cache database to install assets.)
 
 Installation behavior can be adjusted using other flags like `--sync=disable`, `--cache=disable`, `-y/--skip-prompt`, or `--clean`. Use the `-j/--jobs` flag to download multiple packages in parallel.
 
