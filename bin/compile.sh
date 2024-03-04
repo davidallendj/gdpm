@@ -78,6 +78,7 @@ function build_all(){
 function build_exe(){
 	mkdir -p build
 	$CMAKE_COMMAND \
+		--build . \
 		--target gdpm \
 		--target gdpm.static
 	$NINJA_COMMAND
@@ -87,6 +88,7 @@ function build_exe(){
 function build_libs(){
 	mkdir -p build
 	$CMAKE_COMMAND \
+		--build . \
 		--target gdpm-static \
 		--target gdpm-shared \
 		--target gdpm-http \
@@ -96,7 +98,7 @@ function build_libs(){
 
 function build_tests(){
 	mkdir -p build
-	$CMAKE_COMMAND --target gdpm.tests
+	$CMAKE_COMMAND --build . --target gdpm.tests
 	$NINJA_COMMAND
 }
 
