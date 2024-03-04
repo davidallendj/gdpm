@@ -98,6 +98,8 @@ The local database stores all the information sent by the Asset API with additio
 
 *   Export list of installed packages to reinstall later.
 
+*   Parallel downloads using `libcurl`.
+
 ## Building from Source
 
 The project uses the CMake or Meson build system and has been tested with GCC and Clang on Arch/Manjaro Linux. CMake is preferred, but a `meson.build` script is provided and should work with some tweaking. Building on Windows or Mac has not been tested yet so it's not guaranteed to work. Compiling with CMake will build 2 executables, 3 shared libraries, and an archive library to link, while compiling with Meson only builds an executable that links with a shared library.
