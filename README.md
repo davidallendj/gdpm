@@ -214,7 +214,7 @@ The `gdpm` command takes a single subcommand argument such as `install`, `remove
 
 ### Installing, Removing, Updating, and Listing
 
-Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command. (Note: You might have to run a `gdpm fetch` to update the local cache database to install assets.)
+Packages can be installed using the `install` command with a list of package names or by providing a one-package-name-per-line file using the `-f/--file` option. The `-f/--file` option is compatible with the package list using the `export` command.
 
 Installation behavior can be adjusted using other flags like `--sync=disable`, `--cache=disable`, `-y/--skip-prompt`, or `--clean`. Use the `-j/--jobs` flag to download multiple packages in parallel.
 
@@ -225,6 +225,19 @@ $ gdpm install XDateTime "Line Renderer" "Dev Blocks" Vpainter --jobs 4
 
 $ gdpm export path/to/packages.txt
 $ gdpm install -f path/to/packages.txt --sync=disable --skip-prompt
+```
+
+If you get a "no packages found to install" error message, try doing a `gdpm fetch` to update the local cache database, then try again.
+
+```bash
+$ gdpm install "Godot Jolt"
+[ERROR 07:18:41 PM; 2024-03-03] package::install(): no packages found to install.
+$ gdpm fetch                                                                               ✔ 
+[INFO 07:19:19 PM; 2024-03-03] Sychronizing database...Done.
+$ gdpm install "Godot Jolt"                                                                ✔ 
+ Title       Author  Category  Version  Godot  Last Modified        Installed? 
+ Godot Jolt  mihe    Misc         16     4.2   2024-01-08 11:10:46      ❌    
+Do you want to install these packages? (Y/n)
 ```
 
 If you leave out the `--skip-prompt` flag, hit enter to install by default.
