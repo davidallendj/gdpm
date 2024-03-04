@@ -23,7 +23,7 @@ find_package(RapidJSON CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
-find_package(Poco CONFIG REQUIRED COMPONENTS Net JSON Util)
+#find_package(Poco CONFIG REQUIRED COMPONENTS Net JSON Util)
 find_package(libzip CONFIG REQUIRED)
 find_package(SQLiteCpp CONFIG REQUIRED)
 
@@ -36,6 +36,9 @@ set(INCLUDE_DIRS
 	"include"
 	"/usr/include/doctest"
 	${RAPIDJSON_INCLUDE_DIRS}
+  #  Poco::Net
+  #  Poco::JSON
+  #Poco::Util
 )
 set(LINK_LIBS 
 	fmt::fmt 
@@ -43,6 +46,9 @@ set(LINK_LIBS
 	Catch2::Catch2 
 	cxxopts::cxxopts
 	SQLiteCpp
+  #Poco::Net
+  #Poco::JSON
+  #Poco::Util
 	-lcurlpp
 	-lzip
 	-lsqlite3
