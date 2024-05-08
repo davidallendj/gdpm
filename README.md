@@ -373,6 +373,8 @@ $ gdpm config set username towk
 
 - [ ] Adapted to new Asset API.
 
+- [ ] Unit tests.
+
 - [ ] User interface.
 
 - [ ] Experimental dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
