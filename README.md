@@ -124,6 +124,12 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 *   Doxygen (optional; to generate API docs)
 
+Arch Linux users can simply install required libs through pacman:
+
+```bash
+pacman -S base-devel fmt sqlite3 rapidjson cmake libzip curl
+```
+
 After installing all necessary dependencies, build the project::
 
 ```bash
