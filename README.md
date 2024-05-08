@@ -378,12 +378,10 @@ $ gdpm config set username towk
 - [ ] Experimental dependency management. There is no way of handling dependencies using the Godot Asset API. This is a [hot topic](https://github.com/godotengine/godot-proposals/issues/142) and might change in the near future.
 ## Known Issues
 
-*   The code is currently still changing so API is unstable.
-
-*   Logging doesn't write to file.
+*   Logging doesn't write to file yet.
 
 *   Download progress bars are not showing when downloading archives. This is being reworked to display multiple bars dynamically to better show download status.
 
 ## License
 
-See the LICENSE.md file.
+See the `LICENSE.md` file.
