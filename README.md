@@ -33,10 +33,16 @@ GDPM is an attempt to make a simple, front-end, command-line, package manager de
 Common commands for searching, installing, listing, and removing assets.
 
 ```bash
-gdpm search demo
-gdpm install "Third Person Controller" --skip-prompt
+# fetch updates local database if "no packages to install" error
+gdpm fetch
+
+# search and install "Godot Jolt" globally
+gdpm search jolt
+gdpm install "Godot Jolt" --skip-prompt
+
+# list installed packages and remove
 gdpm list --style=table
-gdpm remove "Third Person Controller" --clean
+gdpm remove "Godot Jolt" --clean
 ```
 
 Use `gdpm help` to see full list of commands.
@@ -147,7 +153,7 @@ ln -s ../modules/indicators/include/indicators include/indicators
 ln -s ../modules/csv2/include/csv2 include/csv2
 ```
 
-And then build the project:
+And then build the binaries (check the "build" directory):
 
 ```bash
 # Start by cloning the repo, then...
@@ -166,7 +172,7 @@ cd build
 cmake .. 
 make -j$(nproc)
 
-# Easy build using predefined `compile` script
+# Easy build using predefined `compile` script 
 ${project_root}/bin/compile.sh --all
 
 
