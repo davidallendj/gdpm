@@ -130,7 +130,7 @@ Arch Linux users can simply install required libs through `pacman` and/or `yay`:
 
 ```bash
 pacman -S base-devel fmt sqlite rapidjson cmake libzip curl catch2 cxxopts
-yay -S sqlitecpp curlcpp
+yay -S sqlitecpp libcurlpp
 ```
 
 After installing the packages, clone the submodules and link the headers:
