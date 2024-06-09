@@ -118,19 +118,34 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 
 *   fmt (may be removed later in favor of C++20 std::format)
 
-*   SQLite 3
+*   SQLite 3 and SQLite C++ wrapper
+
+*   cxxopts
 
 *   doctest (optional; for tests, but still WIP)
 
 *   Doxygen (optional; to generate API docs)
 
-Arch Linux users can simply install required libs through pacman:
+Arch Linux users can simply install required libs through `pacman` and/or `yay`:
 
 ```bash
-pacman -S base-devel fmt sqlite3 rapidjson cmake libzip curl
+pacman -S base-devel fmt sqlite rapidjson cmake libzip curl catch2 cxxopts
+yay -S sqlitecpp curlcpp
 ```
 
-After installing all necessary dependencies, build the project::
+After installing the packages, clone the submodules and link the headers:
+
+```bash
+git submodule add https://github.com/p-ranav/argparse modules/argparse
+git submodule add https://github.com/p-ranav/tabulate modules/tabulate
+git submodule add https://github.com/p-ranav/indicators modules/indicators
+
+ln -s ../modules/argparse/include/argparse include/argparse
+ln -s ../modules/tabulate/include/tabulate include/tabulate
+ln -s ../modules/indicators/include/indicators include/indicators
+```
+
+And then build the project:
 
 ```bash
 # Start by cloning the repo, then...
