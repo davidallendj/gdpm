@@ -129,7 +129,7 @@ The project uses the CMake or Meson build system and has been tested with GCC an
 Arch Linux users can simply install required libs through `pacman` and/or `yay`:
 
 ```bash
-pacman -S base-devel fmt sqlite rapidjson cmake libzip curl catch2 cxxopts
+pacman -S base-devel fmt sqlite rapidjson cmake libzip curl catch2 cxxopts doctest
 yay -S sqlitecpp libcurlpp
 ```
 
@@ -139,10 +139,12 @@ After installing the packages, clone the submodules and link the headers:
 git submodule add https://github.com/p-ranav/argparse modules/argparse
 git submodule add https://github.com/p-ranav/tabulate modules/tabulate
 git submodule add https://github.com/p-ranav/indicators modules/indicators
+git submodule add https://github.com/p-ranav/csv2 modules/csv2
 
 ln -s ../modules/argparse/include/argparse include/argparse
 ln -s ../modules/tabulate/include/tabulate include/tabulate
 ln -s ../modules/indicators/include/indicators include/indicators
+ln -s ../modules/csv2/include/csv2 include/csv2
 ```
 
 And then build the project:
