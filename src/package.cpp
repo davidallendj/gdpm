@@ -58,7 +58,7 @@ namespace gdpm::package{
 		if(p_cache.empty()){
 			return log::error_rc(
 				ec::NOT_FOUND, /* TODO: change to PACKAGE_NOT_FOUND */
-				"package::install(): no packages found to install."
+				"package::install(): no package(s) found to install."
 			);
 		}
 		

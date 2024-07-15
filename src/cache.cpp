@@ -17,6 +17,10 @@ namespace gdpm::cache{
 		return utils::replace_all(s, "'", "''");
 	}
 
+	bool exists(const params& params) {
+		return std::filesystem::exists(params.cache_path);
+	}
+
 	error create_package_database(
 		bool overwrite, 
 		const params& params

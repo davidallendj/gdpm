@@ -8,6 +8,7 @@
 #include <variant>
 #include <future>
 #include <any>
+#include <algorithm>
 
 namespace gdpm{
 	class error;

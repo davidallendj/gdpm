@@ -16,6 +16,7 @@ namespace gdpm::cache {
 		string table_name	= GDPM_PACKAGE_CACHE_TABLENAME;
 	};
 
+	bool exists(const params& = params());
 	error create_package_database(bool overwrite = false, const params& = params());
 	error insert_package_info(const package::info_list& packages, const params& = params());
 	result_t<package::info_list> get_package_info_by_id(const package::id_list& package_ids, const params& = params());

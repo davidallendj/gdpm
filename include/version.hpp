@@ -11,7 +11,7 @@ namespace gdpm::version{
 		int major = 0;
 		int minor = 0;
 		int patch = 0;
-		string commit = "";
+		string description = "";
 	};
 
 	std::string to_string(const context& context);
