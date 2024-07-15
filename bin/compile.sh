@@ -46,6 +46,16 @@ function link_all(){
 	link_exe $script_dir/../build/gdpm.tests $script_dir/../bin/$tests
 }
 
+function get_deps() {
+	#git submodule init -f 
+	#git submodule init -f 
+
+	# link the include headers
+	ln -s ../modules/indicators/include/indicators include/indicators
+	ln -s ../modules/tabulate/include/tabulate include/tabulate
+	ln -s ../modules/argparse/include/argparse include/argparse
+}
+
 
 function clean(){
 	rm ${script_dir}/../bin/$exe
@@ -126,6 +136,7 @@ do
 		--exe) 		build_exe 	shift;;
 		--libs) 	build_libs 	shift;;
 		--tests) 	build_tests shift;;
+		--deps)		get_deps	shift;;
 		--sums)		checksums	shift;;
 		-d|--docs)  build_docs 	shift;;
 		-c|--clean) clean 		shift;;
