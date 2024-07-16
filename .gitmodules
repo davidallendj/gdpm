@@ -16,3 +16,6 @@
 [submodule "modules/argparse"]
 	path = modules/argparse
 	url = https://github.com/p-ranav/argparse
+[submodule "modules/indicators"]
+	path = modules/indicators
+	url = https://github.com/p-ranav/indicators

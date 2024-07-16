@@ -153,6 +153,12 @@ ln -s ../modules/indicators/include/indicators include/indicators
 ln -s ../modules/csv2/include/csv2 include/csv2
 ```
 
+Otherwise, you can just update the modules if they're already there and out-of-date:
+
+```bash
+git submodule update --init --recursive
+```
+
 And then build the binaries (check the "build" directory):
 
 ```bash
