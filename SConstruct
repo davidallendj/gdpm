@@ -9,6 +9,7 @@ base_name       = "gdpm"
 include_files   = Glob('include/*.hpp')
 source_files    = Glob('src/*.cpp')
 test_files      = Glob('tests/*.cpp')
+compile_flags   = ""
 
 # build the main executable and tests
 env.Program(f'{base_name}', source_files)
