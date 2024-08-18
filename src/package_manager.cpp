@@ -147,6 +147,13 @@ namespace gdpm::package_manager{
 			.help("set verbosity level")		
 			.nargs(nargs_pattern::optional);
 
+		program.add_argument("--ignore-validation")
+			.action([&](const auto&){ config.ignore_validation = true; })
+			.default_value(false)
+			.implicit_value(true)
+			.help("ignore checking if current directory is a Godot project")
+			.nargs(0);
+
 		install_command.add_description("install package(s)");
 		install_command.add_argument("packages")
 			.required()
@@ -407,6 +414,13 @@ namespace gdpm::package_manager{
 			// program.parse_known_args(argc, argv);
 		} catch(const std::runtime_error& e){
 			return log::error_rc(ec::ARGPARSE_ERROR, e.what());
+		}
+
+		/* Check if we're running in a directory with 'project.godot' file */
+		if (!config.ignore_validation) {
+			if(!std::filesystem::exists("project.godot")){
+				return error(ec::FILE_NOT_FOUND, "no 'project.godot' file found in current directory");
+			}
 		}
 
 		if(program.is_subcommand_used(install_command)){
