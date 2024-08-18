@@ -1,10 +1,7 @@
 
 // Godot Package Manager (GPM)
-#include "constants.hpp"
-#include "log.hpp"
-#include "config.hpp"
+
 #include "package_manager.hpp"
-#include "result.hpp"
 #include <cstdlib>
 
 
