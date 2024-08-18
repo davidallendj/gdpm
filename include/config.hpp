@@ -31,6 +31,7 @@ namespace gdpm::config{
 		bool enable_sync			= true;
 		bool enable_cache			= true;
 		bool skip_prompt			= false;
+		bool ignore_validation 		= false;
 		bool enable_file_logging;
 		bool clean_temporary;
 
