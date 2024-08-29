@@ -7,24 +7,26 @@ GDPM is an attempt to make a simple, front-end, command-line, package manager de
 
 \*GDPM has not been tested for Windows or Mac.
 
--   [Quick Start](#quick-start)
--   [Rational](#rationale)
--   [How It Works](#how-it-works)
--   [Features](#features)
--   [Building from Source](#building-from-source)
-	-   [Prerequisites](#prerequisites)
-	-   [Macro Definitions](#macro-definitions)
-	-   [API Documentation](#api-documentation)
--   [How to use the CLI](#how-to-use-the-cli)
-	-   [Installing, Removing, Updating, and Listing](#installing-removing-updating-and-listing)
-	-   [Searching](#searching)
-	-   [Linking and Cloning](#linking-and-cloning)
-	-   [Cleaning Temporary Files](#cleaning-temporary-files)
-	-   [Managing Remote Sources](#managing-remote-sources)
-	-   [Managing Configuration Properties](#managing-configuration-properties)
--   [Planned Features](#planned-features)
--   [Known Issues](#known-issues)
--   [License](#license)
+- [Godot Package Manager (GDPM)](#godot-package-manager-gdpm)
+	- [Quick Start](#quick-start)
+	- [Rationale](#rationale)
+	- [How It Works](#how-it-works)
+	- [Features](#features)
+	- [Installing with Package Managers](#installing-with-package-managers)
+	- [Building from Source](#building-from-source)
+		- [Prerequisites](#prerequisites)
+		- [Macro Definitions](#macro-definitions)
+		- [API Documentation](#api-documentation)
+	- [How to use the CLI](#how-to-use-the-cli)
+		- [Installing, Removing, Updating, and Listing](#installing-removing-updating-and-listing)
+		- [Searching](#searching)
+		- [Linking and Cloning](#linking-and-cloning)
+		- [Cleaning Temporary Files](#cleaning-temporary-files)
+		- [Managing Remote Sources](#managing-remote-sources)
+		- [Managing Configuration Properties](#managing-configuration-properties)
+	- [Planned Features](#planned-features)
+	- [Known Issues](#known-issues)
+	- [License](#license)
 
 
 
@@ -105,6 +107,18 @@ The local database stores all the information sent by the Asset API with additio
 *   Export list of installed packages to reinstall later.
 
 *   Parallel downloads using `libcurl`.
+
+
+## Installing with Package Managers
+
+Currently, `gdpm` can only be installed using `makepkg` on Arch Linux with plans of packaging for other distributions in the future. 
+
+```bash
+git clone https://github.com/davidallendj/gdpm && cd gdpm/dist/archlinux
+makepkg -si
+```
+
+This should build the static binary from source and then install it in `/usr/bin/gdpm`.
 
 ## Building from Source
 
