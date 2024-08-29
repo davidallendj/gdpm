@@ -16,3 +16,5 @@ vgcore.*
 config.json
 *.txt
 actions-runner/
+**.tar.gz
+**.tar.zst
