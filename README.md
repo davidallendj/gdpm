@@ -177,17 +177,20 @@ And then build the binaries (check the "build" directory):
 
 ```bash
 # Start by cloning the repo, then...
-git clone https://github.com/davidallendj/gdpm
+git clone https://github.com/davidallendj/gdpm && cd gdpm
 cd gdpm
-export project_root=${pwd}
+
+# ... if using CMake with Ninja instead (preferred and tested)...
+cmake -B build -S . -D CMAKE_EXPORT_COMPILE_COMMANDS=1 -D CMAKE_BUILD_TYPE=Release -G Ninja
+ninja -C build -j$(nproc)
 
 # ...if using Meson with Clang on Linux...
 meson build
 meson configure build # only needed if reconfiguring build
 meson compile -C build -j$(nproc)
-CXX=clang++ meson compile -C build -j$(npoc)
+CXX=clang++ meson compile -C build -j$(nproc)
 
-# ...if using CMake on Linux (needs work!)...
+# ...if using CMake with Make on Linux (needs work!)...
 cd build
 cmake .. 
 make -j$(nproc)
