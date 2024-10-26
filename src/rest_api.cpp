@@ -12,10 +12,6 @@
 #include <string>
 #include <ostream>
 
-#include <curlpp/cURLpp.hpp>
-#include <curlpp/Easy.hpp>
-#include <curlpp/Options.hpp>
-#include <curlpp/Exception.hpp>
 
 namespace gdpm::rest_api{
 	
